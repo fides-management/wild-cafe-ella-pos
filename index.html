@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wild Cafe Ella POS</title>
+
+    <!-- Fonts & Icons (still work offline once cached) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        :root {
+            --accent: #1e40af;
+            --text-color: #1f2937;
+            --text-secondary: #374151;
+            --bg-light: #f8fafc;
+            --panel-bg: #ffffff;
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-color);
+            background: var(--bg-light);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: var(--radius-md); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-md); }
+        ::-webkit-scrollbar-thumb:hover { background: #1e3a8a; }
+
+        /* Header */
+        .pos-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--panel-bg); box-shadow: var(--shadow-soft);
+            margin: var(--spacing-sm); border-radius: var(--radius-lg);
+        }
+        .header-left { display: flex; align-items: center; gap: var(--spacing-md); }
+        .menu-toggle {
+            width: 44px; height: 44px; border: none; background: var(--accent);
+            border-radius: var(--radius-md); cursor: pointer; color: white;
+            font-size: 1.25rem; display: flex; align-items: center; justify-content: center;
+            transition: all .2s ease;
+        }
+        .menu-toggle:hover, .menu-toggle:focus { background: #1e3a8a; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .header-info { text-align: center; flex-grow: 1; }
+        .header-info h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.5rem; color: var(--accent); }
+        .header-info .datetime { font-size: .875rem; color: var(--text-secondary); margin-top: var(--spacing-sm); }
+        .action-button {
+            padding: var(--spacing-sm) var(--spacing-md); border: none; border-radius: var(--radius-md);
+            font-weight: 600; cursor: pointer; font-size: .875rem; transition: all .2s ease;
+        }
+        .action-button:hover, .action-button:focus { outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .btn-primary { background: var(--accent); color: white; padding: var(--spacing-md) var(--spacing-lg); font-size: 1rem; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(30,64,175,.3); }
+        .btn-primary:disabled { opacity: .6; cursor: not-allowed; background: #6b7280; }
+        .btn-secondary { background-color: #e2e8f0; color: var(--text-color); }
+        .btn-secondary:hover { background-color: #cbd5e1; }
+
+        /* Slide Menu */
+        .slide-menu { position: fixed; left: -280px; top: 0; width: 280px; height: 100vh;
+            background: linear-gradient(180deg,#1e293b 0%,#0f172a 100%);
+            box-shadow: var(--shadow-elevated); transition: left .3s ease; z-index: 2000; display: flex; flex-direction: column; }
+        .slide-menu.open { left: 0; }
+        .menu-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); opacity: 0; visibility: hidden;
+            transition: opacity .3s ease; z-index: 1999; }
+        .menu-overlay.visible { opacity: 1; visibility: visible; }
+        .menu-header { padding: var(--spacing-lg); border-bottom: 1px solid rgba(255,255,255,.1);
+            display: flex; justify-content: space-between; align-items: center; }
+        .menu-logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; color: var(--accent); }
+        .menu-close { background: none; border: none; color: #cbd5e1; font-size: 1.25rem; cursor: pointer; transition: .2s; }
+        .menu-close:hover, .menu-close:focus { color: #fff; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .menu-items { padding: var(--spacing-md) 0; flex-grow: 1; }
+        .menu-item { display: flex; align-items: center; padding: var(--spacing-md) var(--spacing-lg);
+            color: #cbd5e1; cursor: pointer; font-weight: 500; font-size: 1rem; transition: .2s; }
+        .menu-item:hover, .menu-item:focus { background: rgba(30,64,175,.1); color: #93c5fd; }
+        .menu-item.active { background: rgba(30,64,175,.2); color: #fff; border-left: 4px solid var(--accent); }
+        .menu-icon { margin-right: var(--spacing-md); font-size: 1.25rem; }
+
+        /* Layout */
+        .pos-container { display: grid; grid-template-columns: 280px 2fr 1.5fr; gap: var(--spacing-md);
+            padding: 0 var(--spacing-md) var(--spacing-md); max-height: calc(100vh - 90px); }
+        .panel { background: var(--panel-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);
+            padding: var(--spacing-lg); overflow-y: auto; }
+        .tables-panel { background: var(--accent); color: #fff; padding: var(--spacing-lg); }
+        .tables-panel h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; margin-bottom: var(--spacing-md); font-weight: 700; }
+        .tables-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr));
+            gap: var(--spacing-sm); max-height: calc(100vh - 200px); overflow-y: auto; }
+        .table-card-compact { aspect-ratio: 1; border-radius: var(--radius-md); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; cursor: pointer; transition: .2s; border: 2px solid transparent;
+            font-weight: 600; font-size: .875rem; background: #fff; box-shadow: var(--shadow-soft); }
+        .table-card-compact:hover, .table-card-compact:focus { transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,.15); outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .status-open { background: #f8fafc; border-color: #cbd5e1; color: #64748b; }
+        .status-ongoing { background: #fef3c7; border-color: #fbbf24; color: #d97706; animation: pulse 2s infinite; }
+        .status-ongoing::before { content: 'Yellow'; margin-bottom: var(--spacing-sm); }
+        .status-selected { background: #fff; border-color: var(--accent); color: var(--accent);
+            font-weight: 700; box-shadow: 0 0 0 3px rgba(30,64,175,.2); }
+        .status-selected::before { content: 'Blue'; margin-bottom: var(--spacing-sm); }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+        .mobile-table-selector { display: none; width: 100%; padding: var(--spacing-sm) var(--spacing-md);
+            border: 2px solid #e5e7eb; border-radius: var(--radius-md); font-size: .875rem; margin-bottom: var(--spacing-md);
+            background: #f9fafb; transition: .2s; }
+        .mobile-table-selector:focus, .mobile-table-selector:hover { border-color: var(--accent);
+            outline: 2px solid #93c5fd; outline-offset: 2px; }
+
+        .menu-panel.disabled { filter: blur(2px); pointer-events: none; opacity: .6; }
+        .category-tags { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); padding-bottom: var(--spacing-sm);
+            margin-bottom: var(--spacing-md); }
+        .category-tag { padding: var(--spacing-sm) 1rem; border-radius: 9999px; background: #e2e8f0;
+            cursor: pointer; font-size: .875rem; font-weight: 600; transition: .2s; }
+        .category-tag:hover, .category-tag:focus { background: #cbd5e1; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .category-tag.active { background: var(--accent); color: #fff; }
+        .search-input { width: 100%; padding: var(--spacing-sm) var(--spacing-md); border: 2px solid #e5e7eb;
+            border-radius: var(--radius-md); font-size: .875rem; margin-bottom: var(--spacing-md); transition: .2s; }
+        .search-input:focus { outline: none; border-color: var(--accent); }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr));
+            gap: var(--spacing-md); max-height: calc(100vh - 250px); overflow-y: auto; }
+        .menu-item-card { background: linear-gradient(135deg,#f9f9fb 0%,#fff 100%);
+            border-radius: var(--radius-md); padding: var(--spacing-md); text-align: center; cursor: pointer;
+            border: 2px solid transparent; transition: .2s; }
+        .menu-item-card:hover, .menu-item-card:focus { transform: translateY(-4px); border-color: var(--accent);
+            box-shadow: var(--shadow-elevated); outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .item-icon { font-size: 1.75rem; margin-bottom: var(--spacing-sm); color: var(--accent); }
+        .item-name { font-weight: 600; margin-bottom: var(--spacing-sm); font-size: .875rem; }
+        .item-price { color: var(--accent); font-weight: 700; font-size: .875rem; }
+
+        .current-order-panel { display: flex; flex-direction: column; height: calc(100vh - 90px); }
+        .order-list { list-style: none; padding: 0; overflow-y: auto; margin-bottom: var(--spacing-md);
+            flex-grow: 1; max-height: calc(100vh - 380px); }
+        .order-item { display: grid; grid-template-columns: 2fr 1fr 1fr .5fr; gap: var(--spacing-sm);
+            padding: var(--spacing-md); border-radius: var(--radius-md); background: #f9fafb;
+            margin-bottom: var(--spacing-md); align-items: center; }
+        .qty-controls { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+        .qty-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            background: #e2e8f0; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;
+            font-size: .875rem; transition: .2s; }
+        .qty-btn:hover, .qty-btn:focus { background: #cbd5e1; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .qty-value { cursor: pointer; padding: 2px 8px; font-size: .875rem; }
+        .qty-value:hover, .qty-value:focus { background: #e5e7eb; border-radius: 4px; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .remove-btn { background: #fee2e2; color: #ef4444; border: none; width: 32px; height: 32px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: .875rem; transition: .2s; }
+        .remove-btn:hover, .remove-btn:focus { background: #fecaca; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .order-summary { padding-top: var(--spacing-md); border-top: 2px solid #e5e7eb; flex-shrink: 0; }
+        .summary-row { display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: var(--spacing-sm); font-size: .875rem; }
+        .summary-row.total { font-size: 1.25rem; font-weight: 700; color: var(--accent);
+            padding-top: var(--spacing-sm); border-top: 2px solid #e5e7eb; }
+        .kitchen-notes { margin: var(--spacing-md) 0; flex-shrink: 0; }
+        .note-checkbox { display: flex; align-items: center; margin-bottom: var(--spacing-sm); }
+        .note-checkbox input { margin-right: var(--spacing-sm); cursor: pointer; }
+        .custom-note { width: 100%; padding: var(--spacing-sm); border: 2px solid #e5e7eb;
+            border-radius: var(--radius-md); margin-top: var(--spacing-sm); font-size: .875rem; resize: vertical; }
+        .custom-note:focus { outline: none; border-color: var(--accent); }
+        .order-actions { display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md); flex-shrink: 0; }
+        .order-actions .action-button { flex-grow: 1; }
+
+        /* Modals */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+            justify-content: center; align-items: center; z-index: 11000; opacity: 0; transition: opacity .3s ease; }
+        .modal.is-active { display: flex; opacity: 1; }
+        .modal-content { background: var(--panel-bg); padding: var(--spacing-lg); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-elevated); width: 90%; max-width: 450px; max-height: 85vh;
+            overflow-y: auto; transform: scale(.95); transition: transform .3s ease; }
+        .modal.is-active .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
+        .modal-close { width: 32px; height: 32px; border: none; background: #e2e8f0; border-radius: 50%;
+            cursor: pointer; font-size: .875rem; display: flex; align-items: center; justify-content: center;
+            transition: .2s; }
+        .modal-close:hover, .modal-close:focus { background: #cbd5e1; transform: rotate(90deg);
+            outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .numpad-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--spacing-sm);
+            margin-top: var(--spacing-md); }
+        .numpad-display { width: 100%; padding: var(--spacing-md); border: 2px solid #e5e7eb;
+            border-radius: var(--radius-md); font-size: 1.25rem; text-align: right; margin-bottom: var(--spacing-md);
+            background: #f9fafb; }
+        .numpad-key { padding: var(--spacing-md); font-size: 1rem; min-height: 48px; transition: .2s; }
+        .numpad-key:hover, .numpad-key:focus { background: #cbd5e1; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .key-enter { grid-column: span 2; font-size: .875rem; }
+        .payment-methods-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--spacing-sm);
+            margin: var(--spacing-md) 0; }
+        .method-button { padding: var(--spacing-sm) var(--spacing-md); border: 2px solid #e5e7eb;
+            border-radius: var(--radius-md); background: #f9fafb; cursor: pointer; text-align: center;
+            font-weight: 600; font-size: .875rem; transition: .2s; }
+        .method-button.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+        .method-button:hover, .method-button:focus { background: #e5e7eb; outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .payment-input { width: 100%; padding: var(--spacing-sm) var(--spacing-md); border: 2px solid #e5e7eb;
+            border-radius: var(--radius-md); font-size: .875rem; margin-bottom: var(--spacing-md); }
+        .payment-input:focus { outline: none; border-color: var(--accent); }
+
+        .notification { position: fixed; bottom: 10px; right: 10px; background: #eff6ff; color: var(--accent);
+            padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-md); box-shadow: var(--shadow-soft);
+            border: 1px solid var(--accent); font-size: .875rem; font-weight: 600; display: flex; align-items: center;
+            gap: var(--spacing-sm); z-index: 12000; opacity: 0; transform: translateY(20px); transition: .3s; }
+        .notification.active { opacity: 1; transform: translateY(0); }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .pos-container { grid-template-columns: 1fr 1.5fr; }
+            .tables-panel { display: none; }
+            .mobile-table-selector { display: block; }
+            .current-order-panel { height: calc(100vh - 110px); }
+            .order-list { max-height: calc(100vh - 400px); }
+        }
+        @media (max-width: 768px) {
+            .pos-container { grid-template-columns: 1fr; gap: var(--spacing-sm); }
+            .menu-panel { order: 2; }
+            .current-order-panel { order: 1; height: auto; max-height: calc(100vh - 110px); }
+            .order-list { max-height: calc(100vh - 420px); }
+            .header-info h2 { font-size: 1.25rem; }
+            .action-button { font-size: .75rem; padding: var(--spacing-sm); }
+            .menu-item-card { padding: var(--spacing-sm); }
+            .item-icon { font-size: 1.5rem; }
+            .item-name, .item-price, .category-tag, .search-input, .mobile-table-selector { font-size: .75rem; }
+        }
+        @media (max-width: 600px) {
+            .pos-header { flex-direction: column; gap: var(--spacing-sm); }
+            .header-left, .header-actions { width: 100%; justify-content: space-between; }
+            .header-info { order: -1; }
+            .order-actions { flex-direction: column; }
+            .order-actions .action-button { width: 100%; }
+            .modal-content { max-width: 90%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide Menu -->
+    <div class="slide-menu" id="slide-menu">
+        <div class="menu-header">
+            <div class="menu-logo">Wild Cafe Ella</div>
+            <button class="menu-close" onclick="toggleMenu()" aria-label="Close menu">X</button>
+        </div>
+        <div class="menu-items">
+            <div class="menu-item active" onclick="openItemsPage()" tabindex="0">Dashboard</div>
+            <div class="menu-item" onclick="navigateTo('reports')" tabindex="0">Sales Reports</div>
+     <div class="menu-item" id="past-orders-link" tabindex="0">Past Orders</div>
+            <!-- In slide menu -->
+            <div class="menu-item" id="menu-items-link" tabindex="0">Menu Items</div>
+            <div class="menu-item" onclick="navigateTo('settings')" tabindex="0">Settings</div>
+            <div class="menu-item" onclick="logout()" tabindex="0">Logout</div>
+        </div>
+    </div>
+    <div class="menu-overlay" id="menu-overlay" onclick="toggleMenu()"></div>
+
+    <!-- Header -->
+    <header class="pos-header">
+        <div class="header-left">
+            <button class="menu-toggle" onclick="toggleMenu()" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+        </div>
+        <div class="header-info">
+            <h2>Wild Cafe Ella POS</h2>
+            <div class="datetime" id="header-datetime"></div>
+        </div>
+        <div class="header-actions">
+            <span id="header-table-info">Select a table to begin</span>
+        </div>
+    </header>
+
+    <!-- Mobile Table Selector (hidden on desktop) -->
+    <select class="mobile-table-selector" id="mobile-table-selector" onchange="selectTable(this.value)">
+        <option value="">Select Table...</option>
+    </select>
+
+    <!-- Main Layout -->
+    <main class="pos-container">
+        <!-- Tables Panel -->
+        <section class="panel tables-panel">
+            <h3>Tables</h3>
+            <div class="tables-grid" id="tables-grid"></div>
+        </section>
+
+        <!-- Menu Panel -->
+        <section class="panel menu-panel" id="menu-panel">
+            <div class="category-tags" id="category-tags"></div>
+            <input type="text" class="search-input" id="menu-search" placeholder="Search items or enter ID..." oninput="renderMenuItems(this.value)">
+            <div class="menu-grid" id="menu-grid"></div>
+        </section>
+
+        <!-- Current Order Panel -->
+        <section class="panel current-order-panel">
+            <h3>Current Order <span id="order-table-info"></span></h3>
+            <ul class="order-list" id="current-order-list">
+                <li id="empty-order-placeholder">No items added yet.</li>
+            </ul>
+
+            <div class="order-summary">
+                <div class="summary-row" id="tax-row"><span>Tax (10%)</span> <span id="summary-tax">$0.00</span></div>
+                <div class="summary-row"><span>Subtotal</span> <span id="summary-subtotal">$0.00</span></div>
+                <div class="summary-row" id="discount-row"><span>Discount</span> <span id="summary-discount">$0.00</span></div>
+                <div class="summary-row total"><span>Total</span> <span id="summary-total">$0.00</span></div>
+            </div>
+
+            <div class="kitchen-notes">
+                <div class="note-checkbox"><input type="checkbox" id="less-spice"><label for="less-spice">Less Spice</label></div>
+                <div class="note-checkbox"><input type="checkbox" id="no-gluten"><label for="no-gluten">No Gluten</label></div>
+                <textarea class="custom-note" id="custom-note" placeholder="Custom note..."></textarea>
+            </div>
+
+            <div class="order-actions">
+                <button class="action-button btn-primary" onclick="handleSendToKitchen()">Send to Kitchen</button>
+                <button class="action-button btn-primary" onclick="openPaymentModal()">Pay & Print</button>
+                <button class="action-button btn-secondary" onclick="clearCurrentOrder()">Clear</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Numpad Modal -->
+    <div class="modal" id="numpad-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="numpad-title">Enter Value</h3>
+                <button class="modal-close" onclick="closeModal('numpad-modal')" aria-label="Close">X</button>
+            </div>
+            <div id="numpad-display">0</div>
+            <div class="numpad-grid">
+                <button class="numpad-key action-button" data-key="7">7</button>
+                <button class="numpad-key action-button" data-key="8">8</button>
+                <button class="numpad-key action-button" data-key="9">9</button>
+                <button class="numpad-key action-button" data-key="DEL">DEL</button>
+                <button class="numpad-key action-button" data-key="4">4</button>
+                <button class="numpad-key action-button" data-key="5">5</button>
+                <button class="numpad-key action-button" data-key="6">6</button>
+                <button class="numpad-key action-button" data-key="C">C</button>
+                <button class="numpad-key action-button" data-key="1">1</button>
+                <button class="numpad-key action-button" data-key="2">2</button>
+                <button class="numpad-key action-button" data-key="3">3</button>
+                <button class="numpad-key action-button" data-key="00">00</button>
+                <button class="numpad-key action-button" data-key="0">0</button>
+                <button class="numpad-key action-button" data-key=".">.</button>
+                <button class="numpad-key action-button key-enter btn-primary" data-key="ENTER">Enter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal" id="payment-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Payment</h3>
+                <button class="modal-close" onclick="closeModal('payment-modal')" aria-label="Close">X</button>
+            </div>
+            <div class="payment-methods-grid">
+                <button class="method-button active">Cash</button>
+                <button class="method-button">Credit</button>
+                <button class="method-button">Check</button>
+            </div>
+            <div class="summary-row"><span>Bill Total</span> <span id="payment-bill-total">$0.00</span></div>
+            <div class="summary-row"><span>Discount</span> <span id="payment-discount">$0.00</span></div>
+            <div class="summary-row total"><span>Payable Total</span> <span id="payment-payable-total">$0.00</span></div>
+            <input type="text" class="payment-input" id="payment-amount" placeholder="Amount Received" value="0.00" readonly>
+            <div class="summary-row"><span>Change Due</span> <span id="payment-change-due">$0.00</span></div>
+            <button class="action-button btn-primary" id="finish-bill-btn" onclick="handleConfirmPayment()" disabled>Finish Bill</button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <!-- ======================  JAVASCRIPT  ====================== -->
+    <script>
+        // ---------- SETTINGS (hard-coded) ----------
+        const POS_NAME = 'Wild Cafe Ella';
+        const CURRENCY = '$';
+        const TAX_RATE = 0.10;          // 10%
+        const TAX_ENABLED = true;
+        const DISCOUNT_ENABLED = true;
+
+        // ---------- SAMPLE DATA ----------
+        let tables = Array.from({length: 12}, (_, i) => ({ id: i + 1, status: 'open' }));
+        let menuItems = [
+            { id: 1, name: 'Burger', category: 'Food', price: 12.99, icon: 'fas fa-hamburger' },
+            { id: 2, name: 'Pizza', category: 'Food', price: 15.99, icon: 'fas fa-pizza-slice' },
+            { id: 3, name: 'Coffee', category: 'Drinks', price: 3.99, icon: 'fas fa-coffee' },
+            { id: 4, name: 'Tea', category: 'Drinks', price: 2.99, icon: 'fas fa-mug-hot' },
+            // Add as many items as you need
+        ];
+        let ongoingOrders = [];
+        let currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
+        let isProcessing = false;
+        let globalNumpadTarget = null;
+        let globalNumpadMode = null;
+
+        const formatCurrency = v => `${CURRENCY}${(+v).toFixed(2)}`;
+        const generateOrderId = () => Math.floor(Math.random() * 1_000_000);
+
+ // In <script> of index.html
+document.getElementById('menu-items-link').addEventListener('click', () => {
+  window.electronAPI.openItemsPage();
+});
+
+document.getElementById('past-orders-link').addEventListener('click', () => {
+  window.electronAPI.openOrdersPage();
+});
+        // ---------- UI HELPERS ----------
+        const toggleMenu = () => {
+            document.getElementById('slide-menu').classList.toggle('open');
+            document.getElementById('menu-overlay').classList.toggle('visible');
+        };
+        const closeModal = id => document.getElementById(id).classList.remove('is-active');
+        const showNotification = (msg, dur = 3000) => {
+            const n = document.getElementById('notification');
+            n.textContent = msg; n.classList.add('active');
+            setTimeout(() => n.classList.remove('active'), dur);
+        };
+        const navigateTo = page => alert(`Navigate to ${page} – implement in Electron main process`);
+        const logout = () => alert('Logout – implement in Electron');
+
+        // ---------- TABLE SELECTION ----------
+        const selectTable = tableId => {
+            tableId = +tableId;
+            if (currentOrder.tableId === tableId) {
+                saveCurrentOrder(tableId);
+                currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
+                document.getElementById('mobile-table-selector').value = '';
+            } else {
+                const existing = ongoingOrders.find(o => o.tableId === tableId);
+                currentOrder = existing ? JSON.parse(JSON.stringify(existing)) : {
+                    tableId, orderId: generateOrderId(), items: [], discount: 0, notes: ''
+                };
+                document.getElementById('mobile-table-selector').value = tableId;
+            }
+            document.getElementById('header-table-info').textContent = currentOrder.tableId
+                ? `Table ${currentOrder.tableId} - Order #${currentOrder.orderId}`
+                : 'Select a table to begin';
+            document.getElementById('order-table-info').textContent = currentOrder.tableId
+                ? `(Table ${currentOrder.tableId})` : '';
+            updateMenuPanelState(); resetKitchenNotes(); renderTables(); renderCurrentOrder();
+        };
+
+        const saveCurrentOrder = tableId => {
+            if (!currentOrder.items.length) {
+                ongoingOrders = ongoingOrders.filter(o => o.tableId !== tableId);
+                const t = tables.find(t => t.id === tableId);
+                if (t) t.status = 'open';
+                return;
+            }
+            const { subtotal, total } = calculateSummary(currentOrder.items, currentOrder.discount);
+            currentOrder.subtotal = subtotal; currentOrder.total = total; currentOrder.notes = getKitchenNotes();
+            const idx = ongoingOrders.findIndex(o => o.tableId === tableId);
+            if (idx === -1) ongoingOrders.push(JSON.parse(JSON.stringify(currentOrder)));
+            else ongoingOrders[idx] = JSON.parse(JSON.stringify(currentOrder));
+        };
+
+        const updateMenuPanelState = () => {
+            const panel = document.getElementById('menu-panel');
+            currentOrder.tableId ? panel.classList.remove('disabled') : panel.classList.add('disabled');
+        };
+
+        // ---------- RENDERING ----------
+        const renderTables = () => {
+            const grid = document.getElementById('tables-grid');
+            grid.innerHTML = '';
+            tables.forEach(t => {
+                const sel = t.id === currentOrder.tableId;
+                const cls = sel ? 'status-selected' : t.status === 'ongoing' ? 'status-ongoing' : 'status-open';
+                const card = document.createElement('div');
+                card.className = `table-card-compact ${cls}`;
+                card.innerHTML = `<div style="font-size:1.5rem;margin-bottom:4px;"><i class="fas fa-chair"></i></div><div>Table ${t.id}</div>`;
+                card.tabIndex = 0; card.onclick = () => selectTable(t.id);
+                card.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && selectTable(t.id);
+                grid.appendChild(card);
+            });
+
+            // mobile selector
+            const sel = document.getElementById('mobile-table-selector');
+            sel.innerHTML = '<option value="">Select Table...</option>';
+            tables.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id; opt.textContent = `Table ${t.id}`;
+                sel.appendChild(opt);
+            });
+        };
+
+        const renderMenuItems = (search = '', cat = 'All') => {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+            const filtered = menuItems.filter(i => {
+                const matchCat = cat === 'All' || i.category === cat;
+                const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase()) || i.id.toString() === search;
+                return matchCat && matchSearch;
+            });
+            filtered.forEach(i => {
+                const card = document.createElement('div');
+                card.className = 'menu-item-card'; card.tabIndex = 0;
+                card.onclick = () => addItemToOrder(i.id);
+                card.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && addItemToOrder(i.id);
+                card.innerHTML = `
+                    <div class="item-icon"><i class="${i.icon}"></i></div>
+                    <div class="item-name">${i.name} (#${i.id})</div>
+                    <div class="item-price">${formatCurrency(i.price)}</div>`;
+                grid.appendChild(card);
+            });
+        };
+
+        const addItemToOrder = id => {
+            if (!currentOrder.tableId) return showNotification('Select a table first!');
+            const item = menuItems.find(i => i.id === id);
+            const ex = currentOrder.items.findIndex(i => i.id === id);
+            if (ex > -1) currentOrder.items[ex].qty++;
+            else currentOrder.items.push({ ...item, qty: 1 });
+            renderCurrentOrder();
+        };
+        const removeItem = idx => { currentOrder.items.splice(idx, 1); renderCurrentOrder(); };
+        const updateQuantity = (idx, delta) => {
+            currentOrder.items[idx].qty += delta;
+            if (currentOrder.items[idx].qty <= 0) removeItem(idx);
+            else renderCurrentOrder();
+        };
+
+        const calculateSummary = (items, disc = 0) => {
+            const sub = items.reduce((s, i) => s + i.price * i.qty, 0);
+            const tax = TAX_ENABLED ? sub * TAX_RATE : 0;
+            const total = Math.max(0, sub + tax - disc);
+            return { subtotal: sub, tax, discount: disc, total };
+        };
+
+        const renderCurrentOrder = () => {
+            const list = document.getElementById('current-order-list');
+            list.innerHTML = '';
+            if (!currentOrder.items.length) {
+                list.innerHTML = '<li id="empty-order-placeholder">No items added yet.</li>';
+                document.getElementById('summary-subtotal').textContent = formatCurrency(0);
+                document.getElementById('summary-tax').textContent = formatCurrency(0);
+                document.getElementById('summary-discount').textContent = formatCurrency(0);
+                document.getElementById('summary-total').textContent = formatCurrency(0);
+                document.getElementById('tax-row').style.display = TAX_ENABLED ? 'flex' : 'none';
+                document.getElementById('discount-row').style.display = DISCOUNT_ENABLED ? 'flex' : 'none';
+                return;
+            }
+            const { subtotal, tax, discount, total } = calculateSummary(currentOrder.items, currentOrder.discount);
+            currentOrder.items.forEach((it, i) => {
+                const li = document.createElement('li');
+                li.className = 'order-item';
+                li.innerHTML = `
+                    <div><strong>${it.name}</strong></div>
+                    <div class="qty-controls">
+                        <button class="qty-btn" onclick="updateQuantity(${i},1)" aria-label="Increase">+</button>
+                        <span class="qty-value" onclick="openNumpad('qty','integer',${it.qty},${i})" tabindex="0" role="button">${it.qty}</span>
+                        <button class="qty-btn" onclick="updateQuantity(${i},-1)" aria-label="Decrease">−</button>
+                    </div>
+                    <div style="text-align:right;font-weight:600;">${formatCurrency(it.price * it.qty)}</div>
+                    <button class="remove-btn" onclick="removeItem(${i})" aria-label="Remove">×</button>`;
+                list.appendChild(li);
+            });
+            document.getElementById('summary-subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('summary-tax').textContent = formatCurrency(tax);
+            document.getElementById('summary-discount').textContent = formatCurrency(discount);
+            document.getElementById('summary-total').textContent = formatCurrency(total);
+            document.getElementById('tax-row').style.display = TAX_ENABLED ? 'flex' : 'none';
+            document.getElementById('discount-row').style.display = DISCOUNT_ENABLED ? 'flex' : 'none';
+        };
+
+        // ---------- NUMPAD ----------
+        const openNumpad = (target, mode, init = 0, idx = null) => {
+            closeModal('payment-modal');
+            globalNumpadTarget = target; globalNumpadMode = mode;
+            const disp = document.getElementById('numpad-display');
+            const title = document.getElementById('numpad-title');
+            title.textContent = target === 'qty' ? 'Enter Quantity' :
+                               target === 'discount' ? 'Enter Discount' :
+                               target === 'payment' ? 'Enter Payment Amount' :
+                               target === 'search' ? 'Enter Item ID' : 'Enter Value';
+            let val = mode === 'integer' ? (parseInt(init) || 0).toString() :
+                      mode === 'decimal' ? (parseFloat(init) === 0 ? '0' : (parseFloat(init) || 0).toString()) : (init || '');
+            disp.textContent = val;
+            document.getElementById('numpad-modal').setAttribute('data-item-index', idx ?? '');
+            document.querySelectorAll('.numpad-key[data-key="."], .numpad-key[data-key="00"]')
+                .forEach(b => b.style.display = mode === 'decimal' ? 'block' : 'none');
+            setTimeout(() => document.getElementById('numpad-modal').classList.add('is-active'), 10);
+        };
+
+        const handleNumpadInput = (key, cur) => {
+            if (globalNumpadMode === 'integer') {
+                if (key === 'C') return '0';
+                if (key === 'DEL') return cur.length > 1 ? cur.slice(0, -1) : '0';
+                if (key === 'ENTER') return cur;
+                if (!/^[0-9]$/.test(key)) return cur;
+                return (cur === '0' ? key : cur + key).replace(/^0+(?=\d)/, '');
+            }
+            if (globalNumpadMode === 'decimal') {
+                if (key === 'C') return '0';
+                if (key === 'DEL') {
+                    const nv = cur.length > 1 ? cur.slice(0, -1) : '0';
+                    return nv.endsWith('.') ? nv.slice(0, -1) : nv;
+                }
+                if (key === 'ENTER') return cur;
+                if (key === '.') {
+                    if (!cur.includes('.')) return cur === '' ? '0.' : cur + '.';
+                    return cur;
+                }
+                if (/^[0-9]$/.test(key) || key === '00') {
+                    let add = key === '00' ? '00' : key;
+                    if (cur === '0') {
+                        if (key === '0' || key === '00') return '0';
+                        return key;
+                    }
+                    if (cur.includes('.')) {
+                        const [i, d] = cur.split('.');
+                        const newDec = (d || '').length + add.length;
+                        if (newDec > 2) {
+                            if (key === '00' && (d || '').length === 1) add = '0';
+                            else return cur;
+                        }
+                    }
+                    return cur + add;
+                }
+            }
+            return cur;
+        };
+
+        document.getElementById('menu-search').addEventListener('click', e => { e.preventDefault(); openNumpad('search', 'integer', ''); });
+        document.getElementById('payment-amount').addEventListener('click', e => { e.preventDefault(); openNumpad('payment', 'decimal', document.getElementById('payment-amount').value); });
+
+        document.querySelectorAll('.numpad-key').forEach(k => k.addEventListener('click', () => {
+            const disp = document.getElementById('numpad-display');
+            const cur = disp.textContent;
+            const key = k.dataset.key;
+            if (key === 'ENTER') {
+                let val = disp.textContent;
+                const idx = document.getElementById('numpad-modal').dataset.itemIndex;
+                if (globalNumpadMode === 'integer') {
+                    val = parseInt(val) || 0;
+                    if (globalNumpadTarget === 'qty' && idx !== '') {
+                        if (val <= 0) currentOrder.items.splice(idx, 1);
+                        else currentOrder.items[idx].qty = val;
+                        renderCurrentOrder();
+                    } else if (globalNumpadTarget === 'search') {
+                        document.getElementById('menu-search').value = val;
+                        const active = document.querySelector('.category-tag.active');
+                        filterMenu(active ? active.textContent : 'All', active);
+                    }
+                } else if (globalNumpadMode === 'decimal') {
+                    const num = parseFloat(val) || 0;
+                    val = num.toFixed(2);
+                    if (globalNumpadTarget === 'payment') {
+                        document.getElementById('payment-amount').value = Math.max(0, num).toFixed(2);
+                        updatePaymentModal(); closeModal('numpad-modal');
+                        setTimeout(() => document.getElementById('payment-modal').classList.add('is-active'), 100);
+                    } else if (globalNumpadTarget === 'discount') {
+                        currentOrder.discount = Math.max(0, num) || 0;
+                        renderCurrentOrder();
+                    }
+                }
+                closeModal('numpad-modal');
+            } else {
+                disp.textContent = handleNumpadInput(key, cur);
+            }
+        }));
+
+        // ---------- KITCHEN & PAYMENT ----------
+        const getKitchenNotes = () => {
+            const notes = [];
+            if (document.getElementById('less-spice').checked) notes.push('Less Spice');
+            if (document.getElementById('no-gluten').checked) notes.push('No Gluten');
+            const cust = document.getElementById('custom-note').value.trim();
+            if (cust) notes.push(cust);
+            return notes.join(', ');
+        };
+        const resetKitchenNotes = () => {
+            document.getElementById('less-spice').checked = false;
+            document.getElementById('no-gluten').checked = false;
+            document.getElementById('custom-note').value = '';
+        };
+
+        const handleSendToKitchen = () => {
+            if (!currentOrder.tableId || !currentOrder.items.length) return showNotification('Add items first!');
+            currentOrder.notes = getKitchenNotes();
+            saveCurrentOrder(currentOrder.tableId);
+            const t = tables.find(x => x.id === currentOrder.tableId);
+            if (t) t.status = 'ongoing';
+            renderTables();
+
+            // ---- PRINT KITCHEN TICKET (replace with your own local printer if needed) ----
+            const win = window.open('print/kitchen-ticket.html', '_blank', 'width=400,height=600');
+            win.onload = () => win.postMessage({
+                type: 'kitchen-ticket',
+                order: JSON.parse(JSON.stringify(currentOrder)),
+                CURRENCY, formatCurrency: formatCurrency.toString()
+            }, '*');
+
+            resetKitchenNotes();
+            showNotification('Sent to kitchen!');
+        };
+
+        const openPaymentModal = () => {
+            if (!currentOrder.tableId || !currentOrder.items.length) return showNotification('Add items before payment!');
+            document.getElementById('payment-amount').value = '0.00';
+            updatePaymentModal();
+            document.getElementById('payment-modal').classList.add('is-active');
+        };
+        const updatePaymentModal = () => {
+            const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
+            const paid = parseFloat(document.getElementById('payment-amount').value) || 0;
+            const change = Math.max(0, paid - total);
+            document.getElementById('payment-bill-total').textContent = formatCurrency(total);
+            document.getElementById('payment-discount').textContent = formatCurrency(currentOrder.discount);
+            document.getElementById('payment-payable-total').textContent = formatCurrency(total);
+            document.getElementById('payment-change-due').textContent = formatCurrency(change);
+            const btn = document.getElementById('finish-bill-btn');
+            btn.disabled = paid < total || isProcessing || isNaN(paid);
+        };
+        const handleConfirmPayment = () => {
+            if (isProcessing) return;
+            isProcessing = true;
+            const btn = document.getElementById('finish-bill-btn'); btn.disabled = true;
+            const { subtotal, tax, total } = calculateSummary(currentOrder.items, currentOrder.discount);
+            const paid = parseFloat(document.getElementById('payment-amount').value) || 0;
+            if (paid < total || isNaN(paid)) {
+                showNotification('Insufficient amount!'); isProcessing = false; btn.disabled = false; return;
+            }
+            const change = paid - total;
+            closeModal('payment-modal');
+
+            // ---- PRINT RECEIPT (replace with local HTML if you don’t have PHP) ----
+            const win = window.open('print/receipt.html', '_blank', 'width=400,height=700');
+            win.onload = () => win.postMessage({
+                type: 'receipt',
+                order: JSON.parse(JSON.stringify(currentOrder)),
+                payment: { paid, change, method: 'Cash', subtotal, tax, total, tax_rate: (TAX_RATE * 100).toFixed(1) },
+                CURRENCY, POS_NAME, TAX_ENABLED,
+                formatCurrency: formatCurrency.toString()
+            }, '*');
+
+            // reset
+            ongoingOrders = ongoingOrders.filter(o => o.tableId !== currentOrder.tableId);
+            const t = tables.find(x => x.id === currentOrder.tableId);
+            if (t) t.status = 'open';
+            currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
+            document.getElementById('header-table-info').textContent = 'Select a table to begin';
+            document.getElementById('order-table-info').textContent = '';
+            document.getElementById('mobile-table-selector').value = '';
+            resetKitchenNotes(); updateMenuPanelState(); renderTables(); renderCurrentOrder();
+            isProcessing = false;
+            showNotification('Payment completed!');
+        };
+
+        const clearCurrentOrder = () => {
+            if (currentOrder.items.length && !confirm(`Clear all items${currentOrder.tableId ? ` from Table ${currentOrder.tableId}` : ''}?`)) return;
+            const tid = currentOrder.tableId;
+            currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
+            document.getElementById('header-table-info').textContent = 'Select a table to begin';
+            document.getElementById('order-table-info').textContent = '';
+            document.getElementById('mobile-table-selector').value = '';
+            resetKitchenNotes(); updateMenuPanelState(); renderCurrentOrder(); renderTables();
+        };
+
+        const renderCategoryTags = () => {
+            const cats = [...new Set(menuItems.map(i => i.category))].sort();
+            const container = document.getElementById('category-tags');
+            container.innerHTML = `<span class="category-tag active" data-category="All" onclick="filterMenu('All',this)" tabindex="0" role="button">All</span>`;
+            cats.forEach(c => {
+                const tag = document.createElement('span');
+                tag.className = 'category-tag'; tag.textContent = c; tag.tabIndex = 0;
+                tag.onclick = e => filterMenu(c, e.target);
+                tag.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && filterMenu(c, e.target);
+                container.appendChild(tag);
+            });
+        };
+        const filterMenu = (cat, el) => {
+            document.querySelectorAll('.category-tag').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            renderMenuItems(document.getElementById('menu-search').value, cat);
+        };
+
+        // ---------- INITIALISATION ----------
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('pos_welcome_shown')) {
+                showNotification('Welcome to Wild Cafe Ella POS!');
+                localStorage.setItem('pos_welcome_shown', '1');
+            }
+            const updateDT = () => {
+                const now = new Date();
+                const opts = { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+                document.getElementById('header-datetime').textContent = now.toLocaleString('en-US', opts).replace(',', ' •');
+            };
+            updateDT(); setInterval(updateDT, 60_000);
+
+            renderCategoryTags(); renderMenuItems(); renderTables(); renderCurrentOrder(); updateMenuPanelState();
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    if (document.getElementById('slide-menu').classList.contains('open')) toggleMenu();
+                    if (document.getElementById('numpad-modal').classList.contains('is-active')) closeModal('numpad-modal');
+                    if (document.getElementById('payment-modal').classList.contains('is-active')) closeModal('payment-modal');
+                }
+            });
+        });
+
+        // expose for inline handlers
+        window.selectTable = selectTable;
+        window.addItemToOrder = addItemToOrder;
+        window.removeItem = removeItem;
+        window.updateQuantity = updateQuantity;
+        window.handleSendToKitchen = handleSendToKitchen;
+        window.openPaymentModal = openPaymentModal;
+        window.handleConfirmPayment = handleConfirmPayment;
+        window.clearCurrentOrder = clearCurrentOrder;
+        window.toggleMenu = toggleMenu;
+        window.closeModal = closeModal;
+        window.openNumpad = openNumpad;
+        window.navigateTo = navigateTo;
+        window.logout = logout;
+
+        document.addEventListener('DOMContentLoaded', () => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (user) {
+        document.getElementById('user-info').textContent = `Logged in as: ${user.name}`;
+    }
+});
+    </script>
+</body>
+</html>

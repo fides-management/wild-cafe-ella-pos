@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Menu Items • Wild Cafe POS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root{--accent:#1e40af;--bg:#f8fafc;--card:#fff;--danger:#ef4444}
+    body{font-family:'Inter',sans-serif;background:var(--bg);padding:20px;margin:0}
+    .container{max-width:900px;margin:auto;background:var(--card);padding:30px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,.1)}
+    h2{color:var(--accent);border-bottom:2px solid #e5e7eb;padding-bottom:10px;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;margin-top:20px}
+    th,td{padding:12px;border:1px solid #e5e7eb;text-align:left}
+    th{background:#f3f4f6;font-weight:600;color:#1f2937}
+    .btn{padding:8px 12px;border:none;border-radius:5px;cursor:pointer;font-weight:500;transition:opacity .2s;margin-left:5px}
+    .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{opacity:.9}
+    .btn-secondary{background:#e5e7eb;color:#1f2937}.btn-secondary:hover{opacity:.9}
+    .btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{opacity:.9}
+    .form-group{margin-bottom:15px;display:flex;gap:10px;align-items:flex-end}
+    .form-group label{font-weight:600;margin-bottom:5px;display:block}
+    .form-group input{padding:10px;border:1px solid #ccc;border-radius:5px;width:100%;box-sizing:border-box}
+    .form-group > div{flex:1}.form-group .full-width{flex:3}
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,.6)}
+    .modal-content{background:#fefefe;margin:10% auto;padding:25px;border:1px solid #888;width:80%;max-width:450px;border-radius:8px}
+    .close{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer}.close:hover{color:#000}
+    .loading{opacity:.6;pointer-events:none}
+    #toast{position:fixed;bottom:20px;right:20px;min-width:300px;background:#1f2937;color:#fff;padding:16px;border-radius:8px;
+           box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999;display:flex;align-items:center;gap:10px;opacity:0;
+           transition:opacity .3s,transform .3s;transform:translateY(20px)}
+    #toast.show{opacity:1;transform:translateY(0)}
+    #toast.success{background:#10b981}#toast.error{background:var(--danger)}#toast i{font-size:1.2em}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Menu Item Management</h2>
+    <button id="back-btn" style="background:none;border:none;color:var(--accent);font-size:1rem;cursor:pointer;margin-bottom:20px;text-decoration:underline;">
+      Back to POS
+    </button>
+
+    <h3>Add New Item</h3>
+    <div class="form-group">
+      <div class="full-width"><label for="name">Name</label><input type="text" id="name" required placeholder="e.g., Spicy Chicken Burger"></div>
+      <div><label for="category">Category</label><input type="text" id="category" list="categories" required placeholder="e.g., Mains"><datalist id="categories"></datalist></div>
+      <div><label for="price">Price (<span id="currency">Rs</span>)</label><input type="number" step="0.01" id="price" required placeholder="0.00"></div>
+      <div><label for="icon_class">Icon (FA)</label><input type="text" id="icon_class" value="fas fa-utensils" placeholder="e.g., fas fa-hamburger"></div>
+      <button id="add-btn" class="btn btn-primary" style="height:42px;">+ Add Item</button>
+    </div>
+
+    <h3>Current Menu</h3>
+    <div style="overflow-x:auto;">
+      <table id="items-table">
+        <thead><tr><th>ID</th><th>Icon</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">X</span>
+      <h4>Edit Menu Item</h4>
+      <input type="hidden" id="edit-id">
+      <div class="form-group" style="display:block;"><label>Name</label><input type="text" id="edit-name" required style="width:100%"></div>
+      <div class="form-group" style="display:block;"><label>Category</label><input type="text" id="edit-category" required style="width:100%"></div>
+      <div class="form-group" style="display:block;"><label>Price</label><input type="number" step="0.01" id="edit-price" required style="width:100%"></div>
+      <div class="form-group" style="display:block;"><label>Icon Class</label><input type="text" id="edit-icon_class" required style="width:100%"></div>
+      <button id="save-btn" class="btn btn-primary" style="width:100%;">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"><i id="toast-icon"></i><span id="toast-msg"></span></div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    let CURRENCY = 'Rs', items = [], categories = [];
+
+    const toast = (msg, type = 'error') => {
+      const t = $('#toast'), i = $('#toast-icon'), m = $('#toast-msg');
+      t.className = type;
+      i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+      m.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    };
+
+    /* ---------- Refresh ONLY <tbody> ---------- */
+    const refreshTable = async () => {
+      try {
+        items = await window.menuAPI.getAll();
+        const tbody = $('#items-table tbody');
+        tbody.innerHTML = items.map(it => `
+          <tr data-id="${it.id}">
+            <td>${it.id}</td>
+            <td><i class="${it.icon_class || 'fas fa-utensils'}"></i></td>
+            <td>${escape(it.name)}</td>
+            <td>${escape(it.category)}</td>
+            <td>${CURRENCY}${Number(it.price).toFixed(2)}</td>
+            <td>
+              <button class="btn btn-secondary" onclick="openEdit(${it.id})">Edit</button>
+              <button class="btn btn-danger" onclick="deleteItem(${it.id})">Delete</button>
+            </td>
+          </tr>`).join('');
+
+        categories = [...new Set(items.map(i => i.category))].sort();
+        $('#categories').innerHTML = categories.map(c => `<option value="${c}">`).join('');
+      } catch (e) {
+        console.error('refreshTable error:', e);
+        toast('Failed to refresh menu');
+      }
+    };
+
+    /* ---------- Initial load ---------- */
+    const load = async () => {
+      try {
+        CURRENCY = await window.menuAPI.getCurrency();
+        $('#currency').textContent = CURRENCY;
+        await refreshTable();
+      } catch (e) {
+        console.error('load error:', e);
+        toast('Loading failed – retrying in 3s');
+        setTimeout(load, 3000);
+      }
+    };
+
+    const escape = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+
+    /* ---------- Add ---------- */
+    $('#add-btn').onclick = async () => {
+      const n = $('#name').value.trim(),
+            c = $('#category').value.trim(),
+            p = parseFloat($('#price').value),
+            i = $('#icon_class').value.trim() || 'fas fa-utensils';
+
+      if (!n || !c || isNaN(p)) return toast('Fill all fields');
+
+      const btn = $('#add-btn');
+      btn.classList.add('loading');
+      try {
+        await window.menuAPI.add({ name: n, category: c, price: p, icon_class: i });
+        $('#name').value = $('#category').value = $('#price').value = '';
+        $('#icon_class').value = 'fas fa-utensils';
+        toast('Item added!', 'success');
+        await refreshTable();
+      } catch (e) {
+        console.error('add error:', e);
+        toast('Add failed: ' + e.message);
+      } finally {
+        btn.classList.remove('loading');
+      }
+    };
+
+    /* ---------- Edit ---------- */
+    window.openEdit = id => {
+      const it = items.find(x => x.id === id);
+      if (!it) return;
+      $('#edit-id').value = it.id;
+      $('#edit-name').value = it.name;
+      $('#edit-category').value = it.category;
+      $('#edit-price').value = it.price;
+      $('#edit-icon_class').value = it.icon_class || 'fas fa-utensils';
+      $('#editModal').style.display = 'block';
+    };
+
+    $('#save-btn').onclick = async () => {
+      const id = $('#edit-id').value,
+            n = $('#edit-name').value.trim(),
+            c = $('#edit-category').value.trim(),
+            p = parseFloat($('#edit-price').value),
+            i = $('#edit-icon_class').value.trim() || 'fas fa-utensils';
+
+      if (!n || !c || isNaN(p)) return toast('Fill all fields');
+
+      const btn = $('#save-btn');
+      btn.classList.add('loading');
+      try {
+        await window.menuAPI.update({ id, name: n, category: c, price: p, icon_class: i });
+        closeModal();
+        toast('Item updated!', 'success');
+        await refreshTable();
+      } catch (e) {
+        console.error('update error:', e);
+        toast('Update failed: ' + e.message);
+      } finally {
+        btn.classList.remove('loading');
+      }
+    };
+
+    /* ---------- Delete ---------- */
+    window.deleteItem = async id => {
+      if (!confirm('Delete this item?')) return;
+
+      const row = document.querySelector(`tr[data-id="${id}"]`);
+      if (row) row.classList.add('loading');
+
+      try {
+        await window.menuAPI.delete(id);
+        toast('Item deleted!', 'success');
+        await refreshTable();
+      } catch (e) {
+        console.error('delete error:', e);
+        toast('Delete failed: ' + e.message);
+      } finally {
+        if (row) row.classList.remove('loading');
+      }
+    };
+
+    const closeModal = () => $('#editModal').style.display = 'none';
+    window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
+    $('#back-btn').onclick = () => window.close();
+
+    window.menuAPI.onMenuUpdated(() => refreshTable());
+
+    load();
+  </script>
+</body>
+</html>
