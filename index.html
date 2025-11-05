@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wild Cafe Ella POS</title>
 
-    <!-- Fonts & Icons (still work offline once cached) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
     <style>
         :root {
             --accent: #1e40af;
@@ -26,7 +22,8 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Inter', sans-serif;
+            /* System font stack for guaranteed offline use */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
             color: var(--text-color);
             background: var(--bg-light);
             line-height: 1.6;
@@ -54,7 +51,8 @@
         }
         .menu-toggle:hover, .menu-toggle:focus { background: #1e3a8a; outline: 2px solid #93c5fd; outline-offset: 2px; }
         .header-info { text-align: center; flex-grow: 1; }
-        .header-info h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.5rem; color: var(--accent); }
+        /* Using a system font for display text as a fallback for 'Space Grotesk' */
+        .header-info h2 { font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 700; font-size: 1.5rem; color: var(--accent); }
         .header-info .datetime { font-size: .875rem; color: var(--text-secondary); margin-top: var(--spacing-sm); }
         .action-button {
             padding: var(--spacing-sm) var(--spacing-md); border: none; border-radius: var(--radius-md);
@@ -77,7 +75,8 @@
         .menu-overlay.visible { opacity: 1; visibility: visible; }
         .menu-header { padding: var(--spacing-lg); border-bottom: 1px solid rgba(255,255,255,.1);
             display: flex; justify-content: space-between; align-items: center; }
-        .menu-logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; color: var(--accent); }
+        /* Using a system font for display text as a fallback for 'Space Grotesk' */
+        .menu-logo { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1.75rem; font-weight: 700; color: var(--accent); }
         .menu-close { background: none; border: none; color: #cbd5e1; font-size: 1.25rem; cursor: pointer; transition: .2s; }
         .menu-close:hover, .menu-close:focus { color: #fff; outline: 2px solid #93c5fd; outline-offset: 2px; }
         .menu-items { padding: var(--spacing-md) 0; flex-grow: 1; }
@@ -93,7 +92,8 @@
         .panel { background: var(--panel-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);
             padding: var(--spacing-lg); overflow-y: auto; }
         .tables-panel { background: var(--accent); color: #fff; padding: var(--spacing-lg); }
-        .tables-panel h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; margin-bottom: var(--spacing-md); font-weight: 700; }
+        /* Using a system font for display text as a fallback for 'Space Grotesk' */
+        .tables-panel h3 { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1.25rem; margin-bottom: var(--spacing-md); font-weight: 700; }
         .tables-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr));
             gap: var(--spacing-sm); max-height: calc(100vh - 200px); overflow-y: auto; }
         .table-card-compact { aspect-ratio: 1; border-radius: var(--radius-md); display: flex; flex-direction: column;
@@ -236,7 +236,6 @@
 </head>
 <body>
 
-    <!-- Slide Menu -->
     <div class="slide-menu" id="slide-menu">
         <div class="menu-header">
             <div class="menu-logo">Wild Cafe Ella</div>
@@ -246,15 +245,15 @@
             <div class="menu-item active" onclick="openItemsPage()" tabindex="0">Dashboard</div>
             <div class="menu-item" onclick="navigateTo('reports')" tabindex="0">Sales Reports</div>
      <div class="menu-item" id="past-orders-link" tabindex="0">Past Orders</div>
-            <!-- In slide menu -->
             <div class="menu-item" id="menu-items-link" tabindex="0">Menu Items</div>
+            <div class="menu-item" id="open-categories-page" tabindex="0">Categories</div>
+             <div class="menu-item" id="open-tables-page" tabindex="0">Tables</div>
             <div class="menu-item" onclick="navigateTo('settings')" tabindex="0">Settings</div>
             <div class="menu-item" onclick="logout()" tabindex="0">Logout</div>
         </div>
     </div>
     <div class="menu-overlay" id="menu-overlay" onclick="toggleMenu()"></div>
 
-    <!-- Header -->
     <header class="pos-header">
         <div class="header-left">
             <button class="menu-toggle" onclick="toggleMenu()" aria-label="Open menu"><i class="fas fa-bars"></i></button>
@@ -268,27 +267,22 @@
         </div>
     </header>
 
-    <!-- Mobile Table Selector (hidden on desktop) -->
     <select class="mobile-table-selector" id="mobile-table-selector" onchange="selectTable(this.value)">
         <option value="">Select Table...</option>
     </select>
 
-    <!-- Main Layout -->
     <main class="pos-container">
-        <!-- Tables Panel -->
         <section class="panel tables-panel">
             <h3>Tables</h3>
             <div class="tables-grid" id="tables-grid"></div>
         </section>
 
-        <!-- Menu Panel -->
         <section class="panel menu-panel" id="menu-panel">
             <div class="category-tags" id="category-tags"></div>
             <input type="text" class="search-input" id="menu-search" placeholder="Search items or enter ID..." oninput="renderMenuItems(this.value)">
             <div class="menu-grid" id="menu-grid"></div>
         </section>
 
-        <!-- Current Order Panel -->
         <section class="panel current-order-panel">
             <h3>Current Order <span id="order-table-info"></span></h3>
             <ul class="order-list" id="current-order-list">
@@ -316,7 +310,6 @@
         </section>
     </main>
 
-    <!-- Numpad Modal -->
     <div class="modal" id="numpad-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -344,7 +337,6 @@
         </div>
     </div>
 
-    <!-- Payment Modal -->
     <div class="modal" id="payment-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -365,11 +357,27 @@
         </div>
     </div>
 
-    <!-- Notification -->
     <div class="notification" id="notification"></div>
 
-    <!-- ======================  JAVASCRIPT  ====================== -->
     <script>
+        // ====================== BROWSER MOCK (For Local Testing) ======================
+        // These mocks prevent the application from crashing when run in a standard browser
+        // by replacing the Electron communication channels with console logs.
+        window.electronAPI = {
+            openItemsPage: () => console.log('Mock: Opening Menu Items Page (Requires Electron)'),
+            openOrdersPage: () => console.log('Mock: Opening Past Orders Page (Requires Electron)'),
+            // Mock the menu management API as well
+            invoke: (channel, ...args) => {
+                console.log(`Mock: electronAPI.invoke('${channel}', ${JSON.stringify(args)})`);
+                return Promise.resolve(); // Return a resolved promise to avoid runtime errors
+            }
+        };
+        window.api = {
+            openCategoriesPage: () => console.log('Mock: Opening Categories Page (Requires Electron)'),
+            openTablesPage: () => console.log('Mock: Opening Tables Page (Requires Electron)'),
+        };
+        // ==============================================================================
+
         // ---------- SETTINGS (hard-coded) ----------
         const POS_NAME = 'Wild Cafe Ella';
         const CURRENCY = '$';
@@ -380,11 +388,13 @@
         // ---------- SAMPLE DATA ----------
         let tables = Array.from({length: 12}, (_, i) => ({ id: i + 1, status: 'open' }));
         let menuItems = [
-            { id: 1, name: 'Burger', category: 'Food', price: 12.99, icon: 'fas fa-hamburger' },
-            { id: 2, name: 'Pizza', category: 'Food', price: 15.99, icon: 'fas fa-pizza-slice' },
-            { id: 3, name: 'Coffee', category: 'Drinks', price: 3.99, icon: 'fas fa-coffee' },
-            { id: 4, name: 'Tea', category: 'Drinks', price: 2.99, icon: 'fas fa-mug-hot' },
-            // Add as many items as you need
+            { id: 1, name: 'Spicy Chicken Burger', category: 'Mains', price: 12.99, icon: 'fas fa-hamburger' },
+            { id: 2, name: 'Pepperoni Pizza', category: 'Mains', price: 15.99, icon: 'fas fa-pizza-slice' },
+            { id: 3, name: 'Espresso', category: 'Drinks', price: 3.99, icon: 'fas fa-coffee' },
+            { id: 4, name: 'Herbal Tea', category: 'Drinks', price: 2.99, icon: 'fas fa-mug-hot' },
+            { id: 5, name: 'Chocolate Cake', category: 'Desserts', price: 6.50, icon: 'fas fa-cake-candles' },
+            { id: 6, name: 'Fried Rice', category: 'Mains', price: 10.00, icon: 'fas fa-bowl-rice' },
+            { id: 7, name: 'Soda', category: 'Drinks', price: 1.50, icon: 'fas fa-glass' },
         ];
         let ongoingOrders = [];
         let currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
@@ -395,14 +405,20 @@
         const formatCurrency = v => `${CURRENCY}${(+v).toFixed(2)}`;
         const generateOrderId = () => Math.floor(Math.random() * 1_000_000);
 
- // In <script> of index.html
-document.getElementById('menu-items-link').addEventListener('click', () => {
-  window.electronAPI.openItemsPage();
-});
+        // Bind Menu Links to Mocked API
+        document.getElementById('menu-items-link').addEventListener('click', () => {
+          window.electronAPI.openItemsPage();
+        });
+        document.getElementById('open-categories-page').addEventListener('click', () => {
+          window.api.openCategoriesPage();
+        });
+        document.getElementById('open-tables-page').addEventListener('click', () => {
+          window.api.openTablesPage();
+        });
+        document.getElementById('past-orders-link').addEventListener('click', () => {
+          window.electronAPI.openOrdersPage();
+        });
 
-document.getElementById('past-orders-link').addEventListener('click', () => {
-  window.electronAPI.openOrdersPage();
-});
         // ---------- UI HELPERS ----------
         const toggleMenu = () => {
             document.getElementById('slide-menu').classList.toggle('open');
@@ -414,23 +430,29 @@ document.getElementById('past-orders-link').addEventListener('click', () => {
             n.textContent = msg; n.classList.add('active');
             setTimeout(() => n.classList.remove('active'), dur);
         };
-        const navigateTo = page => alert(`Navigate to ${page} – implement in Electron main process`);
-        const logout = () => alert('Logout – implement in Electron');
+        const navigateTo = page => showNotification(`Maps to ${page} – Placeholder for Electron Function`);
+        const logout = () => showNotification('Logout – Placeholder for Electron Function');
 
         // ---------- TABLE SELECTION ----------
         const selectTable = tableId => {
             tableId = +tableId;
+            // Deselect/Save if the same table is clicked
             if (currentOrder.tableId === tableId) {
                 saveCurrentOrder(tableId);
                 currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
                 document.getElementById('mobile-table-selector').value = '';
             } else {
+                // Save any active order before switching
+                if (currentOrder.tableId !== null) {
+                    saveCurrentOrder(currentOrder.tableId);
+                }
                 const existing = ongoingOrders.find(o => o.tableId === tableId);
                 currentOrder = existing ? JSON.parse(JSON.stringify(existing)) : {
                     tableId, orderId: generateOrderId(), items: [], discount: 0, notes: ''
                 };
                 document.getElementById('mobile-table-selector').value = tableId;
             }
+            const table = tables.find(t => t.id === currentOrder.tableId);
             document.getElementById('header-table-info').textContent = currentOrder.tableId
                 ? `Table ${currentOrder.tableId} - Order #${currentOrder.orderId}`
                 : 'Select a table to begin';
@@ -440,17 +462,25 @@ document.getElementById('past-orders-link').addEventListener('click', () => {
         };
 
         const saveCurrentOrder = tableId => {
+            const orderIndex = ongoingOrders.findIndex(o => o.tableId === tableId);
+            const table = tables.find(t => t.id === tableId);
+
             if (!currentOrder.items.length) {
-                ongoingOrders = ongoingOrders.filter(o => o.tableId !== tableId);
-                const t = tables.find(t => t.id === tableId);
-                if (t) t.status = 'open';
+                if (orderIndex > -1) ongoingOrders.splice(orderIndex, 1);
+                if (table) table.status = 'open';
                 return;
             }
+
             const { subtotal, total } = calculateSummary(currentOrder.items, currentOrder.discount);
             currentOrder.subtotal = subtotal; currentOrder.total = total; currentOrder.notes = getKitchenNotes();
-            const idx = ongoingOrders.findIndex(o => o.tableId === tableId);
-            if (idx === -1) ongoingOrders.push(JSON.parse(JSON.stringify(currentOrder)));
-            else ongoingOrders[idx] = JSON.parse(JSON.stringify(currentOrder));
+            
+            if (orderIndex === -1) {
+                ongoingOrders.push(JSON.parse(JSON.stringify(currentOrder)));
+            } else {
+                ongoingOrders[orderIndex] = JSON.parse(JSON.stringify(currentOrder));
+            }
+
+            if (table) table.status = currentOrder.items.length > 0 ? 'ongoing' : 'open';
         };
 
         const updateMenuPanelState = () => {
@@ -463,10 +493,11 @@ document.getElementById('past-orders-link').addEventListener('click', () => {
             const grid = document.getElementById('tables-grid');
             grid.innerHTML = '';
             tables.forEach(t => {
-                const sel = t.id === currentOrder.tableId;
-                const cls = sel ? 'status-selected' : t.status === 'ongoing' ? 'status-ongoing' : 'status-open';
+                const ongoing = ongoingOrders.find(o => o.tableId === t.id);
+                const status = t.id === currentOrder.tableId ? 'status-selected' : (ongoing ? 'status-ongoing' : 'status-open');
                 const card = document.createElement('div');
-                card.className = `table-card-compact ${cls}`;
+                card.className = `table-card-compact ${status}`;
+                // NOTE: Using a placeholder for the Font Awesome icon for offline readiness
                 card.innerHTML = `<div style="font-size:1.5rem;margin-bottom:4px;"><i class="fas fa-chair"></i></div><div>Table ${t.id}</div>`;
                 card.tabIndex = 0; card.onclick = () => selectTable(t.id);
                 card.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && selectTable(t.id);
@@ -479,6 +510,7 @@ document.getElementById('past-orders-link').addEventListener('click', () => {
             tables.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = t.id; opt.textContent = `Table ${t.id}`;
+                if (t.id === currentOrder.tableId) opt.selected = true;
                 sel.appendChild(opt);
             });
         };
@@ -682,13 +714,8 @@ document.getElementById('past-orders-link').addEventListener('click', () => {
             if (t) t.status = 'ongoing';
             renderTables();
 
-            // ---- PRINT KITCHEN TICKET (replace with your own local printer if needed) ----
-            const win = window.open('print/kitchen-ticket.html', '_blank', 'width=400,height=600');
-            win.onload = () => win.postMessage({
-                type: 'kitchen-ticket',
-                order: JSON.parse(JSON.stringify(currentOrder)),
-                CURRENCY, formatCurrency: formatCurrency.toString()
-            }, '*');
+            // Mock: For local test, log the order instead of printing
+            console.log('--- MOCK KITCHEN TICKET ---', JSON.parse(JSON.stringify(currentOrder)));
 
             resetKitchenNotes();
             showNotification('Sent to kitchen!');
@@ -723,15 +750,11 @@ document.getElementById('past-orders-link').addEventListener('click', () => {
             const change = paid - total;
             closeModal('payment-modal');
 
-            // ---- PRINT RECEIPT (replace with local HTML if you don’t have PHP) ----
-            const win = window.open('print/receipt.html', '_blank', 'width=400,height=700');
-            win.onload = () => win.postMessage({
-                type: 'receipt',
+            // Mock: For local test, log the receipt instead of printing
+            console.log('--- MOCK RECEIPT ---', {
                 order: JSON.parse(JSON.stringify(currentOrder)),
                 payment: { paid, change, method: 'Cash', subtotal, tax, total, tax_rate: (TAX_RATE * 100).toFixed(1) },
-                CURRENCY, POS_NAME, TAX_ENABLED,
-                formatCurrency: formatCurrency.toString()
-            }, '*');
+            });
 
             // reset
             ongoingOrders = ongoingOrders.filter(o => o.tableId !== currentOrder.tableId);

@@ -1,45 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Past Orders • Wild Cafe POS</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <style>
-    :root {
-      --accent:#1e40af;--bg:#f8fafc;--card:#fff;--text:#1f2937;--success:#059669;--danger:#ef4444;--border:#e5e7eb;
-    }
-    body{font-family:'Inter',sans-serif;background:var(--bg);margin:0;padding:20px}
-    .container{max-width:1200px;margin:auto;background:var(--card);padding:30px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
-    h2{color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:12px;margin-bottom:24px;font-size:1.5rem}
-    .back-link{display:inline-block;margin-bottom:20px;color:var(--accent);text-decoration:none;font-weight:500}
-    .back-link:hover{text-decoration:underline}
-    .filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:end}
-    .filters input,.filters button{padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:1rem}
-    .filters input{flex:1;min-width:140px}
-    .filters button{background:var(--accent);color:white;border:none;cursor:pointer}
-    .filters button:hover{opacity:.9}
-    .filters .clear-btn{background:#e5e7eb;color:var(--text)}
-    table{width:100%;border-collapse:collapse;font-size:.9rem}
-    th,td{padding:14px 12px;border:1px solid var(--border);text-align:left;vertical-align:top}
-    th{background:#f8fafc;font-weight:600;color:var(--text)}
-    .order-id{font-family:monospace;font-weight:600}
-    .total{font-weight:bold;color:var(--success)}
-    .items-list{white-space:pre-line;font-family:'Courier New',monospace;font-size:.85rem;background:#f9fafb;padding:8px;border-radius:4px;line-height:1.4}
-    .notes{color:var(--danger);font-style:italic;margin-top:6px;display:block}
-    .empty{text-align:center;padding:60px 20px;color:#9ca3af;border:2px dashed var(--border);border-radius:12px;font-size:1.1rem}
-    .loading{text-align:center;padding:40px;color:#6b7280}
-    .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:4px}
-    .remove-btn:hover{transform:scale(1.1)}
-    .table-badge{background:#e0e7ff;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
-  </style>
+    <meta charset="UTF-8">
+    <title>Past Orders • Wild Cafe POS</title>
+    <style>
+      :root {
+        --accent:#1e40af;--bg:#f8fafc;--card:#fff;--text:#1f2937;--success:#059669;--danger:#ef4444;--border:#e5e7eb;
+      }
+      /* Updated font-family to a system stack for guaranteed offline use */
+      body{font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;background:var(--bg);margin:0;padding:20px}
+      .container{max-width:1200px;margin:auto;background:var(--card);padding:30px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+      h2{color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:12px;margin-bottom:24px;font-size:1.5rem}
+      .back-link{display:inline-block;margin-bottom:20px;color:var(--accent);text-decoration:none;font-weight:500}
+      .back-link:hover{text-decoration:underline}
+      .filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:end}
+      .filters input,.filters button{padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:1rem}
+      .filters input{flex:1;min-width:140px}
+      .filters button{background:var(--accent);color:white;border:none;cursor:pointer}
+      .filters button:hover{opacity:.9}
+      .filters .clear-btn{background:#e5e7eb;color:var(--text)}
+      table{width:100%;border-collapse:collapse;font-size:.9rem}
+      th,td{padding:14px 12px;border:1px solid var(--border);text-align:left;vertical-align:top}
+      th{background:#f8fafc;font-weight:600;color:var(--text)}
+      .order-id{font-family:monospace;font-weight:600}
+      .total{font-weight:bold;color:var(--success)}
+      .items-list{white-space:pre-line;font-family:'Courier New',monospace;font-size:.85rem;background:#f9fafb;padding:8px;border-radius:4px;line-height:1.4}
+      .notes{color:var(--danger);font-style:italic;margin-top:6px;display:block}
+      .empty{text-align:center;padding:60px 20px;color:#9ca3af;border:2px dashed var(--border);border-radius:12px;font-size:1.1rem}
+      .loading{text-align:center;padding:40px;color:#6b7280}
+      .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:4px}
+      .remove-btn:hover{transform:scale(1.1)}
+      .table-badge{background:#e0e7ff;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+    </style>
 </head>
 <body>
   <div class="container">
     <h2>Past Orders</h2>
     <a href="#" id="back-btn" class="back-link">Back to POS</a>
 
-    <!-- Filters -->
     <div class="filters">
       <input type="date" id="date-from" placeholder="From">
       <input type="date" id="date-to" placeholder="To">
@@ -78,7 +76,8 @@
         CURRENCY = currency;
         allOrders = orders.map(o => {
           const data = JSON.parse(o.order_data || '{}');
-          return { ...o, data, table: data.table || '—' };
+          // Add table for filtering, defaulting to '—' if not present
+          return { ...o, data, table: data.table || '—' }; 
         });
         render(filterOrders());
       } catch (e) {
@@ -95,10 +94,15 @@
 
       return allOrders.filter(o => {
         const date = new Date(o.order_date);
+        // Date filtering
         if (from && date < new Date(from)) return false;
-        if (to && date > new Date(to + 'T23:59:59')) return false;
+        // Check until the end of the 'to' day
+        if (to && date > new Date(to + 'T23:59:59')) return false; 
+        
+        // Text search
         if (search) {
-          const text = `${o.table} ${o.payment_method} ${o.data.notes || ''} ${JSON.stringify(o.data.items || [])}`.toLowerCase();
+          const itemsString = (o.data.items || []).map(it => it.name).join(' ');
+          const text = `${o.table} ${o.payment_method} ${o.data.notes || ''} ${itemsString}`.toLowerCase();
           return text.includes(search);
         }
         return true;
@@ -129,7 +133,7 @@
             <tbody>
               ${orders.map(o => {
                 const items = (o.data.items || []).map(it =>
-                  `${it.qty}x ${escape(it.name)} ${CURRENCY}${(it.price*it.qty).toFixed(2)}`
+                  `${it.qty}x ${escape(it.name)} ${CURRENCY}${Number(it.price * it.qty).toFixed(2)}`
                 ).join('\n');
                 return `
                   <tr data-id="${o.id}">

@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Menu Items • Wild Cafe POS</title>
+  <title>Category Management • Wild Cafe POS</title>
   <style>
     :root{--accent:#1e40af;--bg:#f8fafc;--card:#fff;--danger:#ef4444;--success:#10b981}
-    /* Updated font-family to a system stack for guaranteed offline use */
+    /* Updated font-family to a system stack for offline use */
     body{font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;background:var(--bg);padding:20px;margin:0}
     .container{max-width:900px;margin:auto;background:var(--card);padding:30px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,.1)}
     h2{color:var(--accent);border-bottom:2px solid #e5e7eb;padding-bottom:10px;margin-bottom:20px}
@@ -16,23 +16,24 @@
     .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{opacity:.9}
     .btn-secondary{background:#e5e7eb;color:#1f2937}.btn-secondary:hover{opacity:.9}
     .btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{opacity:.9}
+    /* Simplified form-group for category (only 1 field + button) */
     .form-group{margin-bottom:15px;display:flex;gap:10px;align-items:flex-end}
     .form-group label{font-weight:600;margin-bottom:5px;display:block}
     .form-group input{padding:10px;border:1px solid #ccc;border-radius:5px;width:100%;box-sizing:border-box}
     .form-group > div{flex:1}.form-group .full-width{flex:3}
     .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,.6)}
-    .modal-content{background:#fefefe;margin:10% auto;padding:25px;border:1px solid #888;width:80%;max-width:450px;border-radius:8px}
+    /* Increased max-width for wider modal */
+    .modal-content{background:#fefefe;margin:10% auto;padding:25px;border:1px solid #888;width:80%;max-width:600px;border-radius:8px}
     .close{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer}.close:hover{color:#000}
     .loading{opacity:.6;pointer-events:none}
-    /* Toast Styling Update */
+    /* Toast Styling */
     #toast{position:fixed;bottom:20px;right:20px;min-width:300px;background:#1f2937;color:#fff;padding:16px;border-radius:8px;
            box-shadow:0 6px 16px rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;gap:15px;opacity:0;
            transition:opacity .3s,transform .3s;transform:translateY(20px);border:1px solid #fff3}
     #toast.show{opacity:1;transform:translateY(0)}
     #toast.success{background:var(--success);border-color:#fff5}
     #toast.error{background:var(--danger);border-color:#fff5}
-    #toast i{font-size:1.4em} /* Increased icon size */
-    
+    #toast i{font-size:1.4em}
     /* Pagination Styling */
     .pagination-controls{display:flex;justify-content:center;align-items:center;margin-top:20px;gap:10px}
     .pagination-controls button{padding:8px 15px;background:#f3f4f6;border:1px solid #e5e7eb;cursor:pointer;border-radius:5px}
@@ -42,34 +43,27 @@
 </head>
 <body>
   <div class="container">
-    <h2>Menu Item Management</h2>
+    <h2>Category Management</h2>
     <button id="back-btn" style="background:none;border:none;color:var(--accent);font-size:1rem;cursor:pointer;margin-bottom:20px;text-decoration:underline;">
       Back to POS
     </button>
 
-    <h3>Add New Item</h3>
+    <h3>Add New Category</h3>
     <div class="form-group">
-      <div style="flex: 2.5;"><label for="name">Name</label><input type="text" id="name" required placeholder="e.g., Spicy Chicken Burger"></div>
-      <div><label for="code">Code (4-digit)</label><input type="number" id="code" required placeholder="0000" min="0" max="9999"></div>
-      <div><label for="category">Category</label>
-        <input type="text" id="category" list="categories" required placeholder="Select or type category">
-        <datalist id="categories"></datalist>
-      </div>
-      <div><label for="price">Price (<span id="currency">Rs</span>)</label><input type="number" step="0.01" id="price" required placeholder="0.00"></div>
-      <div><label for="icon_class">Icon (FA)</label><input type="text" id="icon_class" value="fas fa-utensils" placeholder="e.g., fas fa-hamburger"></div>
-      <button id="add-btn" class="btn btn-primary" style="height:42px;">+ Add Item</button>
+      <div style="flex: 3;"><label for="name">Category Name</label><input type="text" id="name" required placeholder="e.g., Mains, Drinks, Desserts"></div>
+      <button id="add-btn" class="btn btn-primary" style="height:42px;">+ Add Category</button>
     </div>
 
-    <h3>Current Menu</h3>
+    <h3>Current Categories</h3>
     <div class="form-group" style="margin-top: -10px; align-items: center; gap: 0;">
       <div style="flex: 1; margin-right: 10px;">
         <label for="search" style="display: none;">Search</label>
-        <input type="text" id="search" placeholder="Search by Name, ID, Code, or Category...">
+        <input type="text" id="search" placeholder="Search by ID or Name...">
       </div>
     </div>
     <div style="overflow-x:auto;">
-      <table id="items-table">
-        <thead><tr><th>ID</th><th>Icon</th><th>Name</th><th>Code</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
+      <table id="categories-table">
+        <thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -79,18 +73,14 @@
       <span id="page-info">Page 1 of 1</span>
       <button id="next-page" class="btn-secondary">Next</button>
     </div>
-    </div>
+  </div>
 
   <div id="editModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">X</span>
-      <h4>Edit Menu Item</h4>
+      <h4>Edit Category</h4>
       <input type="hidden" id="edit-id">
-      <div class="form-group" style="display:block;"><label>Name</label><input type="text" id="edit-name" required style="width:100%"></div>
-      <div class="form-group" style="display:block;"><label>Code</label><input type="number" id="edit-code" required style="width:100%" min="0" max="9999"></div>
-      <div class="form-group" style="display:block;"><label>Category</label><input type="text" id="edit-category" required style="width:100%"></div>
-      <div class="form-group" style="display:block;"><label>Price</label><input type="number" step="0.01" id="edit-price" required style="width:100%"></div>
-      <div class="form-group" style="display:block;"><label>Icon Class</label><input type="text" id="edit-icon_class" required style="width:100%"></div>
+      <div class="form-group" style="display:block;"><label>Category Name</label><input type="text" id="edit-name" required style="width:100%"></div>
       <button id="save-btn" class="btn btn-primary" style="width:100%;">Save Changes</button>
     </div>
   </div>
@@ -99,14 +89,15 @@
 
   <script>
     const $ = s => document.querySelector(s);
-    let CURRENCY = 'Rs', items = [], categories = [], filteredItems = [];
+    let categories = [], filteredCategories = [];
     let currentPage = 1;
-    const itemsPerPage = 10;
+    const itemsPerPage = 10; // 10 categories per page
 
+    // Note: Icon classes (like fas fa-check-circle) are kept in toast() 
+    // assuming Font Awesome assets are bundled locally in your Electron app.
     const toast = (msg, type = 'error') => {
       const t = $('#toast'), i = $('#toast-icon'), m = $('#toast-msg');
       t.className = type;
-      // Icons are assumed to be loaded via local FA files, not CDN
       i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
       m.textContent = msg;
       t.classList.add('show');
@@ -117,7 +108,7 @@
 
     /* ---------- Pagination Logic ---------- */
     const updatePagination = () => {
-      const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+      const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
       const controls = $('#pagination-controls');
       
       if (totalPages > 1) {
@@ -138,7 +129,7 @@
     };
 
     $('#next-page').onclick = () => {
-      const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+      const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
       if (currentPage < totalPages) {
         currentPage++;
         renderTable();
@@ -147,33 +138,27 @@
 
     /* ---------- Render Table (Filtered & Paginated) ---------- */
     const renderTable = () => {
-      const tbody = $('#items-table tbody');
+      const tbody = $('#categories-table tbody');
       
-      // Apply search filter to the main 'items' array
+      // Apply search filter to the main 'categories' array
       const searchTerm = $('#search').value.toLowerCase().trim();
-      filteredItems = items.filter(it => 
+      filteredCategories = categories.filter(it => 
         String(it.id).includes(searchTerm) ||
-        String(it.code).includes(searchTerm) ||
-        it.name.toLowerCase().includes(searchTerm) ||
-        it.category.toLowerCase().includes(searchTerm)
+        it.name.toLowerCase().includes(searchTerm)
       );
 
       // Apply pagination to the filtered array
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
-      const paginatedItems = filteredItems.slice(startIndex, endIndex);
+      const paginatedItems = filteredCategories.slice(startIndex, endIndex);
 
       tbody.innerHTML = paginatedItems.map(it => `
         <tr data-id="${it.id}">
           <td>${it.id}</td>
-          <td><i class="${it.icon_class || 'fas fa-utensils'}"></i></td>
           <td>${escape(it.name)}</td>
-          <td>${it.code || 'N/A'}</td>
-          <td>${escape(it.category)}</td>
-          <td>${CURRENCY}${Number(it.price).toFixed(2)}</td>
           <td>
             <button class="btn btn-secondary" onclick="openEdit(${it.id})">Edit</button>
-            <button class="btn btn-danger" onclick="deleteItem(${it.id})">Delete</button>
+            <button class="btn btn-danger" onclick="deleteCategory(${it.id})">Delete</button>
           </td>
         </tr>`).join('');
 
@@ -183,42 +168,19 @@
     /* ---------- Refresh (Fetches all, then calls renderTable) ---------- */
     const refreshTable = async () => {
       try {
-        items = await window.menuAPI.getAll(); // Fetches all items
+        // API call using window.api.getCategories()
+        categories = await window.api.getCategories(); 
         currentPage = 1; // Reset to first page after fresh data load
         renderTable(); 
       } catch (e) {
         console.error('refreshTable error:', e);
-        toast('Failed to refresh menu');
+        toast('Failed to refresh categories');
       }
     };
     
     /* ---------- Initial load and Setup ---------- */
-    const loadCategories = async () => {
-      try {
-        // Fetch categories using the exposed 'api' from preload.js
-        const categoryData = await window.api.getCategories();
-        categories = categoryData.map(c => c.name).sort();
-        
-        // Populate the datalist for Add/Edit
-        const datalist = $('#categories');
-        datalist.innerHTML = categories.map(c => `<option value="${c}">`).join('');
-      } catch (e) {
-        console.error('loadCategories error:', e);
-        toast('Failed to load categories');
-      }
-    };
-    
     const load = async () => {
-      try {
-        CURRENCY = await window.menuAPI.getCurrency();
-        $('#currency').textContent = CURRENCY;
-        await loadCategories();
-        await refreshTable();
-      } catch (e) {
-        console.error('load error:', e);
-        toast('Loading failed – retrying in 3s');
-        setTimeout(load, 3000);
-      }
+      await refreshTable();
     };
     
     /* ---------- Search Logic ---------- */
@@ -230,21 +192,17 @@
 
     /* ---------- Add (C in CRUD) ---------- */
     $('#add-btn').onclick = async () => {
-      const n = $('#name').value.trim(),
-            cd = $('#code').value.trim(),
-            c = $('#category').value.trim(),
-            p = parseFloat($('#price').value),
-            i = $('#icon_class').value.trim() || 'fas fa-utensils';
+      const n = $('#name').value.trim();
 
-      if (!n || !c || isNaN(p) || cd.length !== 4) return toast('Fill all fields correctly (Code must be 4 digits)');
+      if (!n) return toast('Category Name is required.');
 
       const btn = $('#add-btn');
       btn.classList.add('loading');
       try {
-        await window.menuAPI.add({ name: n, code: cd, category: c, price: p, icon_class: i });
-        $('#name').value = $('#category').value = $('#price').value = $('#code').value = '';
-        $('#icon_class').value = 'fas fa-utensils';
-        toast('Item added!', 'success');
+        // API call: addCategory(data)
+        await window.api.addCategory({ name: n });
+        $('#name').value = '';
+        toast('Category added!', 'success');
         await refreshTable();
       } catch (e) {
         console.error('add error:', e);
@@ -256,33 +214,26 @@
 
     /* ---------- Edit/Save (U in CRUD) ---------- */
     window.openEdit = id => {
-      const it = items.find(x => x.id === id);
+      const it = categories.find(x => x.id === id);
       if (!it) return;
       $('#edit-id').value = it.id;
       $('#edit-name').value = it.name;
-      $('#edit-code').value = it.code || '';
-      $('#edit-category').value = it.category;
-      $('#edit-price').value = it.price;
-      $('#edit-icon_class').value = it.icon_class || 'fas fa-utensils';
       $('#editModal').style.display = 'block';
     };
 
     $('#save-btn').onclick = async () => {
       const id = $('#edit-id').value,
-            n = $('#edit-name').value.trim(),
-            cd = $('#edit-code').value.trim(),
-            c = $('#edit-category').value.trim(),
-            p = parseFloat($('#edit-price').value),
-            i = $('#edit-icon_class').value.trim() || 'fas fa-utensils';
+            n = $('#edit-name').value.trim();
 
-      if (!n || !c || isNaN(p) || cd.length !== 4) return toast('Fill all fields correctly (Code must be 4 digits)');
+      if (!n) return toast('Category Name is required.');
 
       const btn = $('#save-btn');
       btn.classList.add('loading');
       try {
-        await window.menuAPI.update({ id, name: n, code: cd, category: c, price: p, icon_class: i });
+        // API call: updateCategory(id, data)
+        await window.api.updateCategory(id, { name: n });
         closeModal();
-        toast('Item updated!', 'success');
+        toast('Category updated!', 'success');
         await refreshTable();
       } catch (e) {
         console.error('update error:', e);
@@ -293,15 +244,16 @@
     };
 
     /* ---------- Delete (D in CRUD) ---------- */
-    window.deleteItem = async id => {
-      if (!confirm('Delete this item?')) return;
+    window.deleteCategory = async id => {
+      if (!confirm('Delete this category?')) return;
 
       const row = document.querySelector(`tr[data-id="${id}"]`);
       if (row) row.classList.add('loading');
 
       try {
-        await window.menuAPI.delete(id);
-        toast('Item deleted!', 'success');
+        // API call: deleteCategory(id)
+        await window.api.deleteCategory(id);
+        toast('Category deleted!', 'success');
         
         // Close the current window/modal after successful deletion
         setTimeout(() => {
@@ -319,8 +271,6 @@
     const closeModal = () => $('#editModal').style.display = 'none';
     window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
     $('#back-btn').onclick = () => window.close();
-
-    window.menuAPI.onMenuUpdated(() => refreshTable());
 
     load();
   </script>
