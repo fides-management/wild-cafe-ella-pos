@@ -320,7 +320,7 @@
     window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
     $('#back-btn').onclick = () => window.close();
 
-    window.menuAPI.onMenuUpdated(() => refreshTable());
+    window.electronAPI.onMenuUpdated(() => refreshTable());
 
     load();
   </script>

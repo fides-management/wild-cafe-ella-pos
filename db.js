@@ -220,16 +220,53 @@ function registerHandlers(db, ipcMain, mainWindow, broadcastToAll) {
     ipcMain.handle('db:fetchMenu', async () => fetchAllMenuItems());
     ipcMain.handle('db:fetchTables', async () => fetchAllDesks());
     
-    ipcMain.handle('db:fetchOngoingOrders', async () => {
-        const [rows] = await db.query(
-            `SELECT s.id, s.price, s.products, d.name AS table_name, s.timestamp, s.active, s.payment_mode
-             FROM sales s LEFT JOIN desk d ON s.desk_id = d.id WHERE s.active = 'pending' ORDER BY s.timestamp ASC`
-        );
-        return rows.map(row => ({
+    // ipcMain.handle('db:fetchOngoingOrders', async () => {
+    //     const [rows] = await db.query(
+    //         `SELECT s.id, s.price, s.products, d.name AS table_name, s.timestamp, s.active, s.payment_mode
+    //          FROM sales s LEFT JOIN desk d ON s.desk_id = d.id WHERE s.active = 'pending' ORDER BY s.timestamp ASC`
+    //     );
+    //     return rows.map(row => ({
+    //         ...row,
+    //         products: JSON.parse(row.products)
+    //     }));
+    // });
+
+    // Assuming necessary modules like ipcMain and db are required/imported earlier.
+// Example: const { ipcMain } = require('electron');
+// Example: const db = require('./database'); 
+
+ipcMain.handle('db:fetchOngoingOrders', async () => {
+    const [rows] = await db.query(
+        `SELECT s.id, s.price, s.products, d.name AS table_name, s.timestamp, s.active, s.payment_mode
+         FROM sales s LEFT JOIN desk d ON s.desk_id = d.id WHERE s.active = 'pending' ORDER BY s.timestamp ASC`
+    );
+    
+    // Safely parse the 'products' JSON data
+    return rows.map(row => {
+        let productsArray = [];
+        const productsData = row.products;
+
+        if (typeof productsData === 'object' && productsData !== null) {
+            // Case 1: The database driver has already converted the JSON column to a JS object/array.
+            productsArray = productsData;
+        } else if (typeof productsData === 'string') {
+            try {
+                // Case 2: Data is a JSON string, attempt to parse it.
+                productsArray = JSON.parse(productsData);
+            } catch (e) {
+                // Case 3: Data is corrupted (e.g., "[object Object]") or invalid JSON string.
+                console.error(`ERROR: Failed to parse products JSON for sale ID ${row.id}:`, productsData, e);
+                // Fallback to an empty array to prevent application crash
+                productsArray = [];
+            }
+        }
+
+        return {
             ...row,
-            products: JSON.parse(row.products)
-        }));
+            products: productsArray // Now guaranteed to be a JS object/array
+        };
     });
+});
 
     ipcMain.handle('db:sendOrderToKitchen', async (event, orderData) => {
         const { products, price, desk_id } = orderData;
@@ -272,6 +309,74 @@ function registerHandlers(db, ipcMain, mainWindow, broadcastToAll) {
             throw new Error(`Failed to finalize payment: ${error.message}`);
         }
     });
+
+   ipcMain.handle("settings-get-all", async () => {
+        try {
+            const [rows] = await db.query(
+                `
+                SELECT name, address, phone_number, email, 
+                       tax_enabled, discount_enabled, tax_rate, discount_rate, currency_symbol,
+                       shop_printer, kitchen_printer
+                FROM settings 
+                WHERE id = 1
+                `
+            );
+            // Return the single row object or an empty object if not found
+            return rows[0] || {}; 
+        } catch (err) {
+            console.error("Failed to fetch settings:", err);
+            throw new Error("Failed to load settings from database.");
+        }
+    });
+
+    ipcMain.handle("settings-update", async (event, data) => {
+        const { 
+            name, address, phone_number, email, 
+            tax_enabled, discount_enabled, tax_rate, discount_rate, currency_symbol,
+            shop_printer, kitchen_printer 
+            // Telegram fields removed
+        } = data;
+        
+        // Convert boolean-like values (checkbox state) to database integers (1 or 0)
+        const taxEnabledInt = tax_enabled ? 1 : 0;
+        const discountEnabledInt = discount_enabled ? 1 : 0;
+        
+        try {
+            await db.query(
+                `
+                UPDATE settings SET 
+                    name = ?, address = ?, phone_number = ?, email = ?, 
+                    tax_enabled = ?, discount_enabled = ?, 
+                    tax_rate = ?, discount_rate = ?, currency_symbol = ?,
+                    shop_printer = ?, kitchen_printer = ?
+                    -- Telegram fields removed
+                WHERE id = 1
+                `,
+                [
+                    name, 
+                    address, 
+                    phone_number, 
+                    email, 
+                    taxEnabledInt, 
+                    discountEnabledInt, 
+                    tax_rate, 
+                    discount_rate, 
+                    currency_symbol,
+                    shop_printer,
+                    kitchen_printer
+                    // Telegram values removed
+                ]
+            );
+            // Notify all renderer processes that settings have been updated
+            broadcastToAll("settings-updated"); 
+            return { success: true, message: "Settings updated successfully." };
+        } catch (err) {
+            console.error("Failed to update settings:", err);
+            throw new Error(`Database error: ${err.message}`);
+        }
+    });
 }
+
+
 
 module.exports = registerHandlers;

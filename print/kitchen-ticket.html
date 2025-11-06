@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Kitchen</title>
+<style>
+  body { font-family: monospace; margin:0; padding:12px; width:350px; font-size:13px; line-height:1.4; }
+  .header { text-align:center; font-weight:bold; font-size:15px; margin-bottom:10px; }
+  .info { margin:8px 0; border-bottom:2px dashed #000; padding-bottom:8px; }
+  .items { width:100%; }
+  .items td { padding:4px 0; }
+  .qty { text-align:center; width:40px; }
+  .name { width:180px; }
+  .notes { font-style:italic; color:#555; margin-top:8px; }
+  .footer { text-align:center; margin-top:15px; font-size:11px; }
+  @media print { body { padding:0; } }
+</style>
+</head><body>
+
+<div class="header">WILD CAFE ELLA</div>
+<div class="info">
+  <strong>Table:</strong> <span id="table"></span>  
+  <strong>Order #</strong> <span id="orderId"></span><br>
+  <span id="time"></span>
+</div>
+
+<table class="items">
+  <tbody id="list"></tbody>
+</table>
+
+<div class="notes" id="notes"></div>
+
+<div class="footer">
+  —— KITCHEN COPY ——<br>
+  Printed: <span id="now"></span>
+</div>
+
+<script>
+  // Receive data from POS
+  window.onmessage = e => {
+    if (e.data.type !== 'kitchen-ticket') return;
+    const { order, CURRENCY } = e.data;
+    
+    document.getElementById('table').textContent = 
+      window.opener?.electronAPI?._deskCache?.find(d=>d.id==order.tableId)?.name 
+      || 'Table '+order.tableId;
+      
+    document.getElementById('orderId').textContent = order.orderId;
+    document.getElementById('time').textContent = new Date().toLocaleString();
+    document.getElementById('now').textContent = new Date().toLocaleTimeString();
+
+    const list = document.getElementById('list');
+    list.innerHTML = order.items.map(it=>`
+      <tr>
+        <td class="qty">${it.qty}×</td>
+        <td class="name">${it.name}</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('notes').textContent = order.notes || '';
+    
+    setTimeout(()=>window.print(), 500);
+  };
+</script>
+</body></html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Receipt</title>
+<style>
+  body {
+    font-family: "Inter", sans-serif;
+    margin:0;
+    padding:18px;
+    width:350px;
+    font-size:13px;
+    line-height:1.5;
+    color:#111;
+    background:#fff;
+  }
+
+  .brand {
+    text-align:center;
+    font-size:18px;
+    font-weight:700;
+    margin-bottom:2px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+  }
+
+  .sub-title {
+    text-align:center;
+    font-size:12px;
+    margin-bottom:10px;
+    opacity:0.7;
+  }
+
+  .divider {
+    border-top:1px dashed #555;
+    margin:10px 0;
+  }
+
+  .info {
+    font-size:12px;
+    margin-bottom:8px;
+  }
+
+  table { width:100%; border-collapse:collapse; }
+  .items td { padding:6px 0; }
+  .qty { text-align:left; width:28px; font-weight:600; }
+  .name { white-space:wrap; width:160px; }
+  .price { text-align:right; width:75px; font-weight:600; }
+
+  .total-row {
+    font-weight:700;
+    margin-top:8px;
+    font-size:14px;
+  }
+
+  .flex-line {
+    display:flex;
+    justify-content:space-between;
+    margin:3px 0;
+  }
+
+  .thanks {
+    text-align:center;
+    font-size:12px;
+    margin-top:12px;
+    font-weight:500;
+  }
+
+  .footer-note {
+    font-size:11px;
+    text-align:center;
+    opacity:0.6;
+  }
+
+  @media print {
+    body { padding:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="brand">WILD CAFE ELLA</div>
+<div class="sub-title">TAX INVOICE</div>
+
+<div class="info">
+  Table: <strong id="table"></strong> &nbsp; | &nbsp; Order #: <strong id="orderId"></strong><br>
+  Date: <span id="date"></span>
+</div>
+
+<div class="divider"></div>
+
+<table class="items"><tbody id="list"></tbody></table>
+
+<div class="divider"></div>
+
+<div class="flex-line">
+  <span>Subtotal</span>
+  <span id="subtotal"></span>
+</div>
+
+<div class="flex-line">
+  <span>Tax (10%)</span>
+  <span id="tax"></span>
+</div>
+
+<div class="flex-line total-row">
+  <span>Total</span>
+  <span id="total"></span>
+</div>
+
+<div class="divider"></div>
+
+<div class="flex-line">
+  <span>Paid (<span id="method"></span>)</span>
+  <strong id="paid"></strong>
+</div>
+
+<div class="flex-line">
+  <span>Change</span>
+  <strong id="change"></strong>
+</div>
+
+<div class="divider"></div>
+
+<div class="thanks">Thank you for dining with us!</div>
+<div class="footer-note" id="now"></div>
+
+<script>
+  window.onmessage = e => {
+    if (e.data.type !== 'receipt') return;
+
+    const { order, payment, CURRENCY, TAX_ENABLED } = e.data;
+    const desk = window.opener?.api?._deskCache?.find(d=>d.id==order.tableId)?.name 
+               || 'Table ' + order.tableId;
+
+    document.getElementById('table').textContent = desk;
+    document.getElementById('orderId').textContent = order.orderId;
+    document.getElementById('date').textContent = new Date(order.time || Date.now()).toLocaleString();
+    document.getElementById('now').textContent = new Date().toLocaleString();
+
+    document.getElementById('list').innerHTML = order.items.map(it => `
+      <tr>
+        <td class="qty">${it.qty}x</td>
+        <td class="name">${it.name}</td>
+        <td class="price">${CURRENCY}${(it.price * it.qty).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('subtotal').textContent = CURRENCY + payment.subtotal.toFixed(2);
+    document.getElementById('tax').textContent = TAX_ENABLED ? CURRENCY + payment.tax.toFixed(2) : '—';
+    document.getElementById('total').textContent = CURRENCY + payment.total.toFixed(2);
+    document.getElementById('method').textContent = payment.method;
+    document.getElementById('paid').textContent = CURRENCY + payment.paid.toFixed(2);
+    document.getElementById('change').textContent = CURRENCY + payment.change.toFixed(2);
+
+    setTimeout(() => window.print(), 300);
+  };
+</script>
+
+</body>
+</html>

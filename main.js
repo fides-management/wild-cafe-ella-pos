@@ -152,7 +152,22 @@ ipcMain.handle("open-tables-page", () => {
     );
 });
 
-
+ipcMain.handle("open-settings-page", () => {
+    createChildWindow(
+        {
+            width: 600,
+            height: 500,
+            title: "Settings – Wild Cafe POS",
+            //  minimizable: false,
+            // maximizable: false,
+            // resizable: false,
+            // autoHideMenuBar: false,
+            // frame: false,
+            // modal: false
+        },
+        path.join(__dirname, "views", "settings.html")
+    );
+});
 
 // ---- Settings (kept as simple send) ----
 ipcMain.on("open-settings", () => {

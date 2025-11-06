@@ -86,191 +86,202 @@
 
   <div id="toast"><i id="toast-icon"></i><span id="toast-msg"></span></div>
 
-  <script>
-    const $ = s => document.querySelector(s);
-    let desks = [], filteredDesks = [];
-    let currentPage = 1;
-    const itemsPerPage = 10; // 10 desks/tables per page
+ <script>
+    const $ = s => document.querySelector(s);
+    let desks = [], filteredDesks = [];
+    let currentPage = 1;
+    const itemsPerPage = 10; // 10 desks/tables per page
 
-    const toast = (msg, type = 'error') => {
-      const t = $('#toast'), i = $('#toast-icon'), m = $('#toast-msg');
-      t.className = type;
-      // Icons are assumed to be loaded via local FA files, not CDN
-      i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
-      m.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
-    };
+    const toast = (msg, type = 'error') => {
+      const t = $('#toast'), i = $('#toast-icon'), m = $('#toast-msg');
+      t.className = type;
+      // Icons are assumed to be loaded via local FA files, not CDN
+      i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+      m.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    };
 
-    const escape = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+    const escape = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
 
-    /* ---------- Pagination Logic ---------- */
-    const updatePagination = () => {
-      const totalPages = Math.ceil(filteredDesks.length / itemsPerPage);
-      const controls = $('#pagination-controls');
-      
-      if (totalPages > 1) {
-        controls.style.display = 'flex';
-        $('#page-info').textContent = `Page ${currentPage} of ${totalPages}`;
-        $('#prev-page').disabled = currentPage === 1;
-        $('#next-page').disabled = currentPage === totalPages;
-      } else {
-        controls.style.display = 'none';
-      }
-    };
+    /* ---------- Pagination Logic ---------- */
+    const updatePagination = () => {
+      const totalPages = Math.ceil(filteredDesks.length / itemsPerPage);
+      const controls = $('#pagination-controls');
+      
+      if (totalPages > 1) {
+        controls.style.display = 'flex';
+        $('#page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+        $('#prev-page').disabled = currentPage === 1;
+        $('#next-page').disabled = currentPage === totalPages;
+      } else {
+        controls.style.display = 'none';
+      }
+    };
 
-    $('#prev-page').onclick = () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTable();
-      }
-    };
+    $('#prev-page').onclick = () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+      }
+    };
 
-    $('#next-page').onclick = () => {
-      const totalPages = Math.ceil(filteredDesks.length / itemsPerPage);
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderTable();
-      }
-    };
+    $('#next-page').onclick = () => {
+      const totalPages = Math.ceil(filteredDesks.length / itemsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+      }
+    };
 
-    /* ---------- Render Table (Filtered & Paginated) ---------- */
-    const renderTable = () => {
-      const tbody = $('#desks-table tbody');
-      
-      // Apply search filter to the main 'desks' array
-      const searchTerm = $('#search').value.toLowerCase().trim();
-      filteredDesks = desks.filter(it => 
-        String(it.id).includes(searchTerm) ||
-        it.name.toLowerCase().includes(searchTerm)
-      );
+    /* ---------- Render Table (Filtered & Paginated) ---------- */
+    const renderTable = () => {
+      const tbody = $('#desks-table tbody');
+      
+      // Apply search filter to the main 'desks' array
+      const searchTerm = $('#search').value.toLowerCase().trim();
+      filteredDesks = desks.filter(it => 
+        String(it.id).includes(searchTerm) ||
+        it.name.toLowerCase().includes(searchTerm)
+      );
 
-      // Apply pagination to the filtered array
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const paginatedItems = filteredDesks.slice(startIndex, endIndex);
+      // Apply pagination to the filtered array
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedItems = filteredDesks.slice(startIndex, endIndex);
 
-      tbody.innerHTML = paginatedItems.map(it => `
-        <tr data-id="${it.id}">
-          <td>${it.id}</td>
-          <td>${escape(it.name)}</td>
-          <td>
-            <button class="btn btn-secondary" onclick="openEdit(${it.id})">Edit</button>
-            <button class="btn btn-danger" onclick="deleteDesk(${it.id})">Delete</button>
-          </td>
-        </tr>`).join('');
+      tbody.innerHTML = paginatedItems.map(it => `
+        <tr data-id="${it.id}">
+          <td>${it.id}</td>
+          <td>${escape(it.name)}</td>
+          <td>
+            <button class="btn btn-secondary" onclick="openEdit(${it.id})">Edit</button>
+            <button class="btn btn-danger" onclick="deleteDesk(${it.id})">Delete</button>
+          </td>
+        </tr>`).join('');
 
-      updatePagination();
-    };
+      updatePagination();
+    };
 
-    /* ---------- Refresh (Fetches all, then calls renderTable) ---------- */
-    const refreshTable = async () => {
-      try {
-        // API call using window.api.getDesks()
-        desks = await window.api.getDesks(); 
-        currentPage = 1; // Reset to first page after fresh data load
-        renderTable(); 
-      } catch (e) {
-        console.error('refreshTable error:', e);
-        toast('Failed to refresh tables');
-      }
-    };
-    
-    /* ---------- Initial load and Setup ---------- */
-    const load = async () => {
-      await refreshTable();
-    };
-    
-    /* ---------- Search Logic ---------- */
-    $('#search').oninput = () => {
-      currentPage = 1; // Reset page when searching
-      renderTable();
-    };
+    /* ---------- Refresh (Fetches all, then calls renderTable) ---------- */
+    const refreshTable = async () => {
+      try {
+        // API call using window.api.getDesks()
+        desks = await window.api.getDesks(); 
+        currentPage = 1; // Reset to first page after fresh data load
+        renderTable(); 
+      } catch (e) {
+        console.error('refreshTable error:', e);
+        toast('Failed to refresh tables');
+      }
+    };
+    
+    /* ---------- Initial load and Setup ---------- */
+    const load = async () => {
+      await refreshTable();
+    };
+    
+    /* ---------- Search Logic ---------- */
+    $('#search').oninput = () => {
+      currentPage = 1; // Reset page when searching
+      renderTable();
+    };
 
 
-    /* ---------- Add (C in CRUD) ---------- */
-    $('#add-btn').onclick = async () => {
-      const n = $('#name').value.trim();
+    /* ---------- Add (C in CRUD) ---------- */
+    $('#add-btn').onclick = async () => {
+      const n = $('#name').value.trim();
 
-      if (!n) return toast('Table Name is required.');
+      if (!n) return toast('Table Name is required.');
 
-      const btn = $('#add-btn');
-      btn.classList.add('loading');
-      try {
-        // API call: addDesk(data)
-        await window.api.addDesk({ name: n });
-        $('#name').value = '';
-        toast('Table added!', 'success');
-        await refreshTable();
-      } catch (e) {
-        console.error('add error:', e);
-        toast('Add failed: ' + e.message);
-      } finally {
-        btn.classList.remove('loading');
-      }
-    };
+      const btn = $('#add-btn');
+      btn.classList.add('loading');
+      try {
+        // API call: addDesk(data)
+        await window.api.addDesk({ name: n });
+        $('#name').value = '';
+        toast('Table added!', 'success');
+        await refreshTable();
+      } catch (e) {
+        console.error('add error:', e);
+        toast('Add failed: ' + e.message);
+      } finally {
+        btn.classList.remove('loading');
+      }
+    };
 
-    /* ---------- Edit/Save (U in CRUD) ---------- */
-    window.openEdit = id => {
-      const it = desks.find(x => x.id === id);
-      if (!it) return;
-      $('#edit-id').value = it.id;
-      $('#edit-name').value = it.name;
-      $('#editModal').style.display = 'block';
-    };
+    /* ---------- Edit/Save (U in CRUD) ---------- */
+    window.openEdit = id => {
+      const it = desks.find(x => x.id === id);
+      if (!it) return;
+      $('#edit-id').value = it.id;
+      $('#edit-name').value = it.name;
+      $('#editModal').style.display = 'block';
+    };
 
-    $('#save-btn').onclick = async () => {
-      const id = $('#edit-id').value,
-            n = $('#edit-name').value.trim();
+    $('#save-btn').onclick = async () => {
+      const id = $('#edit-id').value,
+            n = $('#edit-name').value.trim();
 
-      if (!n) return toast('Table Name is required.');
+      if (!n) return toast('Table Name is required.');
 
-      const btn = $('#save-btn');
-      btn.classList.add('loading');
-      try {
-        // API call: updateDesk(id, data)
-        await window.api.updateDesk(id, { name: n });
-        closeModal();
-        toast('Table updated!', 'success');
-        await refreshTable();
-      } catch (e) {
-        console.error('update error:', e);
-        toast('Update failed: ' + e.message);
-      } finally {
-        btn.classList.remove('loading');
-      }
-    };
+      const btn = $('#save-btn');
+      btn.classList.add('loading');
+      try {
+        // API call: updateDesk(id, data)
+        await window.api.updateDesk(id, { name: n });
+        closeModal();
+        toast('Table updated!', 'success');
+        await refreshTable();
+      } catch (e) {
+        console.error('update error:', e);
+        toast('Update failed: ' + e.message);
+      } finally {
+        btn.classList.remove('loading');
+      }
+    };
 
-    /* ---------- Delete (D in CRUD) ---------- */
-    window.deleteDesk = async id => {
-      if (!confirm('Delete this table?')) return;
+    /* ---------- Delete (D in CRUD) ---------- */
+    window.deleteDesk = async id => {
+      if (!confirm('Delete this table?')) return;
 
-      const row = document.querySelector(`tr[data-id="${id}"]`);
-      if (row) row.classList.add('loading');
+      const row = document.querySelector(`tr[data-id="${id}"]`);
+      if (row) row.classList.add('loading');
 
-      try {
-        // API call: deleteDesk(id)
-        await window.api.deleteDesk(id);
-        toast('Table deleted!', 'success');
-        
-        // Close the current window/modal after successful deletion
-        setTimeout(() => {
-            window.close();
-        }, 500); 
-        
-      } catch (e) {
-        console.error('delete error:', e);
-        toast('Delete failed: ' + e.message);
-      } finally {
-        if (row) row.classList.remove('loading');
-      }
-    };
+      try {
+        // API call: deleteDesk(id)
+        await window.api.deleteDesk(id);
+        toast('Table deleted!', 'success');
+        
+        // Instead of closing the window, call refreshTable() to update the list immediately
+        // If the window is meant to close after ANY operation, keep your original logic.
+        // Assuming you want the window to remain open and update the list:
+        await refreshTable();
 
-    const closeModal = () => $('#editModal').style.display = 'none';
-    window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
-    $('#back-btn').onclick = () => window.close();
+      } catch (e) {
+        console.error('delete error:', e);
+        toast('Delete failed: ' + e.message);
+      } finally {
+        if (row) row.classList.remove('loading');
+      }
+    };
 
-    load();
-  </script>
+    const closeModal = () => $('#editModal').style.display = 'none';
+    window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
+    $('#back-btn').onclick = () => window.close();
+
+    // --- FIX: ADDED TABLE REFRESH LISTENER ---
+    // This ensures that if another window (like the POS main screen) changes a table,
+    // this management screen is automatically updated.
+    if (window.electronAPI && window.electronAPI.onTablesUpdated) {
+        window.electronAPI.onTablesUpdated(() => {
+            console.log('Tables updated event received. Refreshing table list...');
+            refreshTable();
+        });
+    }
+    // ------------------------------------------
+
+    load();
+  </script>
 </body>
 </html>

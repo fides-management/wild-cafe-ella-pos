@@ -272,6 +272,8 @@
     window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
     $('#back-btn').onclick = () => window.close();
 
+         window.electronAPI.onCategoriesUpdated(() => refreshTable());
+
     load();
   </script>
 </body>

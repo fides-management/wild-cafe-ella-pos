@@ -33,6 +33,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Event listener
     onDatabaseCleared: (callback) => ipcRenderer.on('database-cleared', callback),
+
+     onMenuUpdated: (callback) => {
+        ipcRenderer.removeAllListeners('menu-updated');
+        ipcRenderer.on('menu-updated', callback);
+    },
+
+    // --- FIX: ADDED TABLES & CATEGORIES LISTENERS ---
+    onTablesUpdated: (callback) => {
+        ipcRenderer.removeAllListeners('tables-updated');
+        ipcRenderer.on('tables-updated', callback);
+    },
+    onCategoriesUpdated: (callback) => {
+        ipcRenderer.removeAllListeners('categories-updated');
+        ipcRenderer.on('categories-updated', callback);
+    },
+
+onSettingsUpdated: (callback) => {
+        ipcRenderer.removeAllListeners('settings-updated');
+        ipcRenderer.on('settings-updated', callback);
+    },
+
 });
 
 /* ------------------------------------------------------------------
@@ -47,10 +68,7 @@ contextBridge.exposeInMainWorld('menuAPI', {
     delete: (id) => ipcRenderer.invoke('menu-delete', id),
 
     // Ensure we remove old listeners before adding a new one
-    onMenuUpdated: (callback) => {
-        ipcRenderer.removeAllListeners('menu-updated');
-        ipcRenderer.on('menu-updated', callback);
-    },
+   
 });
 
 /* ------------------------------------------------------------------
@@ -77,4 +95,12 @@ contextBridge.exposeInMainWorld('api', {
     // ---------- Settings ----------
     clearDatabase: () => ipcRenderer.send('clear-database'),
     onDatabaseCleared: (callback) => ipcRenderer.on('database-cleared', callback),
+
+   getSettings: () => ipcRenderer.invoke('settings-get-all'),
+    updateSettings: (data) => ipcRenderer.invoke('settings-update', data),
+    
+    clearDatabase: () => ipcRenderer.send('clear-database'),
+    onDatabaseCleared: (callback) => ipcRenderer.on('database-cleared', callback),
+
+    openSettingsPage: () => ipcRenderer.invoke('open-settings-page'),
 });

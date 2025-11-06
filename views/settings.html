@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings • Wild Cafe POS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #1e40af; --bg: #f8fafc; --card: #ffffff; --danger: #ef4444; --success: #10b981; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: var(--card); padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: var(--accent); border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; }
+        .section-header { font-size: 1.1em; font-weight: 700; color: #4b5563; margin-top: 20px; margin-bottom: 10px; border-left: 4px solid var(--accent); padding-left: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 5px; }
+        .form-group input[type="text"], .form-group input[type="number"] {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;
+        }
+        .checkbox-group { display: flex; align-items: center; }
+        .checkbox-group input { margin-right: 10px; transform: scale(1.2); }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: background-color 0.2s; }
+        .btn-primary { background-color: var(--accent); color: white; }
+        .btn-primary:hover { background-color: #1e3a8a; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .telegram-group { display: flex; gap: 10px; align-items: flex-end; }
+        .telegram-group > div { flex-grow: 1; }
+        /* Toast Styling (copied from Table Management file) */
+        #toast{position:fixed;bottom:20px;right:20px;min-width:300px;background:#1f2937;color:#fff;padding:16px;border-radius:8px;
+           box-shadow:0 6px 16px rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;gap:15px;opacity:0;
+           transition:opacity .3s,transform .3s;transform:translateY(20px);border:1px solid #fff3}
+        #toast.show{opacity:1;transform:translateY(0)}
+        #toast.success{background:var(--success);border-color:#fff5}
+        #toast.error{background:var(--danger);border-color:#fff5}
+        #toast i{font-size:1.4em}
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>POS System Settings</h2>
+        <a href="../" style="display: block; margin-bottom: 20px; color: var(--accent); text-decoration: none;">&larr; Back to POS</a>
+        
+        <div id="message-container"></div>
+        
+        <form id="settings-form">
+            <div class="section-header">General & Financial Settings</div>
+            
+            <div class="form-group">
+                <label for="pos_name">POS Name</label>
+                <input type="text" id="pos_name" name="name" value="" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="address">Business Address</label>
+                <input type="text" id="address" name="address" value="">
+            </div>
+            <div class="form-group">
+                <label for="phone_number">Phone Number</label>
+                <input type="text" id="phone_number" name="phone_number" value="">
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address (Gmail)</label>
+                <input type="text" id="email" name="email" value="">
+            </div>
+
+            <div class="form-group">
+                <label for="currency_symbol">Currency Symbol</label>
+                <input type="text" id="currency_symbol" name="currency_symbol" value="" maxlength="10" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="tax_rate">Tax Rate (%)</label>
+                <input type="number" step="0.01" id="tax_rate" name="tax_rate" value="0.00" required>
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="tax_enabled" name="tax_enabled" checked>
+                <label for="tax_enabled">Enable Tax</label>
+            </div>
+            
+            <div class="form-group">
+                <label for="discount_rate">Discount Rate (%)</label>
+                <input type="number" step="0.01" id="discount_rate" name="discount_rate" value="0.00" required>
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="discount_enabled" name="discount_enabled" checked>
+                <label for="discount_enabled">Enable Discount</label>
+            </div>
+
+            <div class="section-header">Printer Settings (Use OS Printer ID/Name)</div>
+            <p style="color:#6b7280; margin-bottom: 10px;">Set unique names for your printers. These names are used in <code>window.open</code> as a hint for print routing on a modern web-based POS setup (often requiring local OS configuration for auto-detection).</p>
+            <div class="form-group">
+                <label for="shop_printer">Shop/Receipt Printer Name/ID</label>
+                <input type="text" id="shop_printer" name="shop_printer" value="">
+            </div>
+            <div class="form-group">
+                <label for="kitchen_printer">Kitchen Ticket Printer Name/ID</label>
+                <input type="text" id="kitchen_printer" name="kitchen_printer" value="">
+            </div>
+            
+            <button type="submit" id="save-settings-btn" class="btn btn-primary" style="margin-top: 20px; width: 100%;">Save All Settings</button>
+        </form>
+
+        <div class="section-header" style="color:#dc2626; border-left-color:#ef4444;">Database Maintenance</div>
+        <form>
+            <input type="hidden" name="action" value="clear_database">
+            <button type="button" id="clear-db-btn" class="btn btn-danger">🗑️ Clear Database (DANGER ZONE)</button>
+        </form>
+    </div>
+
+    <div id="toast"><i id="toast-icon"></i><span id="toast-msg"></span></div>
+
+<script>
+    const $ = s => document.querySelector(s);
+    const $$ = s => document.querySelectorAll(s);
+
+    const toast = (msg, type = 'error') => {
+        const t = $('#toast'), i = $('#toast-icon'), m = $('#toast-msg');
+        t.className = type;
+        // Assuming Font Awesome icons are available for demonstration
+        i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+        m.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    };
+
+    /**
+     * Fetches current settings and populates the form fields.
+     */
+    const loadSettings = async () => {
+        try {
+            const settings = await window.api.getSettings();
+
+            if (!settings || Object.keys(settings).length === 0) {
+                // Initial state/No settings found: use defaults/empty
+                return;
+            }
+
+            // General & Financial
+            $('#pos_name').value = settings.name || '';
+            $('#address').value = settings.address || '';
+            $('#phone_number').value = settings.phone_number || '';
+            $('#email').value = settings.email || '';
+            $('#currency_symbol').value = settings.currency_symbol || 'Rs';
+            
+            // Tax
+            $('#tax_rate').value = parseFloat(settings.tax_rate || 0.00).toFixed(2);
+            $('#tax_enabled').checked = !!settings.tax_enabled;
+
+            // Discount
+            $('#discount_rate').value = parseFloat(settings.discount_rate || 0.00).toFixed(2);
+            $('#discount_enabled').checked = !!settings.discount_enabled;
+
+            // Printers (using new names)
+            $('#shop_printer').value = settings.shop_printer || '';
+            $('#kitchen_printer').value = settings.kitchen_printer || '';
+
+        } catch (e) {
+            console.error('Error loading settings:', e);
+            toast('Failed to load settings. ' + e.message);
+        }
+    };
+
+    /**
+     * Handles the submission of the main settings form.
+     */
+    const handleSaveSettings = async (e) => {
+        e.preventDefault();
+        const btn = $('#save-settings-btn');
+        btn.classList.add('loading');
+
+        try {
+            const data = {
+                // General & Financial
+                name: $('#pos_name').value.trim(),
+                address: $('#address').value.trim(),
+                phone_number: $('#phone_number').value.trim(),
+                email: $('#email').value.trim(),
+                currency_symbol: $('#currency_symbol').value.trim(),
+
+                // Tax
+                tax_rate: parseFloat($('#tax_rate').value),
+                tax_enabled: $('#tax_enabled').checked,
+
+                // Discount
+                discount_rate: parseFloat($('#discount_rate').value),
+                discount_enabled: $('#discount_enabled').checked,
+
+                // Printers
+                shop_printer: $('#shop_printer').value.trim(),
+                kitchen_printer: $('#kitchen_printer').value.trim(),
+                
+                // Telegram fields removed
+            };
+
+            await window.api.updateSettings(data);
+            toast('Settings updated successfully!', 'success');
+        } catch (e) {
+            console.error('Save error:', e);
+            toast('Failed to save settings: ' + e.message);
+        } finally {
+            btn.classList.remove('loading');
+        }
+    };
+
+    /**
+     * Handles the database clear action.
+     */
+    const handleClearDatabase = async () => {
+        if (!confirm('WARNING: Are you absolutely sure you want to clear the entire database (orders, items, settings)? This action is irreversible!')) {
+            return;
+        }
+
+        const btn = $('#clear-db-btn');
+        btn.classList.add('loading');
+        
+        try {
+            await window.api.clearDatabase(); 
+            
+            toast('Database cleared!', 'success');
+        } catch (e) {
+            console.error('Clear database error:', e);
+            toast('Clear failed: ' + e.message);
+        } finally {
+            setTimeout(() => btn.classList.remove('loading'), 1000); 
+        }
+    };
+
+    // ------------------------------------
+    // Event Listeners and Initial Load
+    // ------------------------------------
+    
+    // Listen for setting changes broadcasted from other windows
+    if (window.electronAPI && window.electronAPI.onSettingsUpdated) {
+        window.electronAPI.onSettingsUpdated(loadSettings);
+    }
+
+    // Attach form submit listener for saving settings
+    $('#settings-form').addEventListener('submit', handleSaveSettings);
+
+    // Attach click listener for the Clear Database button
+    $('#clear-db-btn').addEventListener('click', handleClearDatabase);
+    
+    // Telegram test listener removed
+    
+    // Load initial data
+    loadSettings();
+</script>
+</body>
+</html>
