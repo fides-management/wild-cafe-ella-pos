@@ -2,192 +2,217 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Past Orders • Wild Cafe POS</title>
     <style>
       :root {
         --accent:#1e40af;--bg:#f8fafc;--card:#fff;--text:#1f2937;--success:#059669;--danger:#ef4444;--border:#e5e7eb;
       }
-      /* Updated font-family to a system stack for guaranteed offline use */
       body{font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;background:var(--bg);margin:0;padding:20px}
       .container{max-width:1200px;margin:auto;background:var(--card);padding:30px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
       h2{color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:12px;margin-bottom:24px;font-size:1.5rem}
       .back-link{display:inline-block;margin-bottom:20px;color:var(--accent);text-decoration:none;font-weight:500}
       .back-link:hover{text-decoration:underline}
-      .filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:end}
-      .filters input,.filters button{padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:1rem}
-      .filters input{flex:1;min-width:140px}
-      .filters button{background:var(--accent);color:white;border:none;cursor:pointer}
-      .filters button:hover{opacity:.9}
-      .filters .clear-btn{background:#e5e7eb;color:var(--text)}
-      table{width:100%;border-collapse:collapse;font-size:.9rem}
-      th,td{padding:14px 12px;border:1px solid var(--border);text-align:left;vertical-align:top}
-      th{background:#f8fafc;font-weight:600;color:var(--text)}
-      .order-id{font-family:monospace;font-weight:600}
-      .total{font-weight:bold;color:var(--success)}
-      .items-list{white-space:pre-line;font-family:'Courier New',monospace;font-size:.85rem;background:#f9fafb;padding:8px;border-radius:4px;line-height:1.4}
-      .notes{color:var(--danger);font-style:italic;margin-top:6px;display:block}
-      .empty{text-align:center;padding:60px 20px;color:#9ca3af;border:2px dashed var(--border);border-radius:12px;font-size:1.1rem}
-      .loading{text-align:center;padding:40px;color:#6b7280}
-      .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:4px}
-      .remove-btn:hover{transform:scale(1.1)}
-      .table-badge{background:#e0e7ff;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+      
+      /* New Filter Styles (Necessary for the inputs/buttons to display correctly) */
+      .filters{display:flex;gap:10px;margin-bottom:20px;align-items:center;}
+      .filters input[type="date"], .filters input[type="text"], .filters .button{padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:1rem;}
+      .filters input[type="text"]{flex-grow:1;}
+      .filters .button{cursor:pointer;background-color:var(--card);}
+      .filters .button:hover{background-color:#f1f5f9;}
+
+      /* Table Styles */
+      table{width:100%;border-collapse:collapse;margin-top:20px;}
+      th, td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--border);}
+      th{background-color:#f8fafc;color:var(--text);font-weight:600;}
+      td{background-color:var(--card);}
+      .total{font-weight:bold;color:var(--text);}
+      .order-id{font-weight:bold;color:var(--accent);}
+      .items-list{font-size:0.8rem;white-space:pre-wrap;margin:0;}
+      .table-badge{background-color:#eff6ff;color:#1e40af;padding:4px 8px;border-radius:4px;font-size:0.8rem;font-weight:600;}
+
+      /* Utility */
+      .empty, .loading{text-align:center;padding:40px;color:var(--text-secondary);font-size:1.1rem;}
+      .remove-btn{background:var(--danger);color:white;border:none;padding:8px 10px;border-radius:4px;cursor:pointer;}
+      .remove-btn:hover{background:darken(var(--danger), 10%);}
+      .loading{opacity:0.5;pointer-events:none;}
     </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Past Orders</h2>
-    <a href="#" id="back-btn" class="back-link">Back to POS</a>
 
-    <div class="filters">
-      <input type="date" id="date-from" placeholder="From">
-      <input type="date" id="date-to" placeholder="To">
-      <input type="text" id="search" placeholder="Search by Table #, Item, Note...">
-      <button id="clear-filters" class="clear-btn">Clear</button>
-    </div>
-
-    <div id="content">
-      <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading orders...</div>
-    </div>
-  </div>
-
-  <script>
-    const $ = s => document.querySelector(s);
-    const $$ = s => document.querySelectorAll(s);
-    let allOrders = [];
-    let CURRENCY = 'Rs';
-
-    // --- Toast ---
-    const toast = (msg, type = 'error') => {
-      const t = document.createElement('div');
-      t.style.cssText = `position:fixed;bottom:20px;right:20px;padding:16px 20px;background:${type==='success'?'#10b981':'#ef4444'};color:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:9999;font-weight:500;min-width:300px;transform:translateY(100px);opacity:0;transition:all .3s`;
-      t.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-exclamation-triangle'}"></i> ${msg}`;
-      document.body.appendChild(t);
-      setTimeout(() => { t.style.transform='translateY(0)'; t.style.opacity='1'; }, 10);
-      setTimeout(() => { t.style.transform='translateY(100px)'; t.style.opacity='0'; setTimeout(() => t.remove(), 300); }, 3000);
-    };
-
-    // --- Load Data ---
-    const load = async () => {
-      try {
-        const [currency, orders] = await Promise.all([
-          window.electronAPI.invoke('menu-get-currency'),
-          window.electronAPI.invoke('orders-get-all')
-        ]);
-        CURRENCY = currency;
-        allOrders = orders.map(o => {
-          const data = JSON.parse(o.order_data || '{}');
-          // Add table for filtering, defaulting to '—' if not present
-          return { ...o, data, table: data.table || '—' }; 
-        });
-        render(filterOrders());
-      } catch (e) {
-        console.error(e);
-        $('#content').innerHTML = '<div class="empty">Failed to load orders. Check console.</div>';
-      }
-    };
-
-    // --- Filter ---
-    const filterOrders = () => {
-      const from = $('#date-from').value;
-      const to = $('#date-to').value;
-      const search = $('#search').value.toLowerCase().trim();
-
-      return allOrders.filter(o => {
-        const date = new Date(o.order_date);
-        // Date filtering
-        if (from && date < new Date(from)) return false;
-        // Check until the end of the 'to' day
-        if (to && date > new Date(to + 'T23:59:59')) return false; 
+    <div class="container">
+        <a href="#" id="back-btn" class="back-link"><i class="fas fa-arrow-left"></i> Back to POS</a>
         
-        // Text search
-        if (search) {
-          const itemsString = (o.data.items || []).map(it => it.name).join(' ');
-          const text = `${o.table} ${o.payment_method} ${o.data.notes || ''} ${itemsString}`.toLowerCase();
-          return text.includes(search);
+        <h2>Past Orders History</h2>
+
+        <div class="filters">
+            <label for="date-from">From:</label>
+            <input type="date" id="date-from" title="Date From">
+            
+            <label for="date-to">To:</label>
+            <input type="date" id="date-to" title="Date To">
+            
+            <input type="text" id="search" placeholder="Search by ID, Product, or Table Name">
+            
+            <button id="clear-filters" class="button" title="Clear All Filters">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+
+        <div id="content">
+            <div class="loading">Loading past orders...</div>
+        </div>
+
+    </div>
+
+    <script>
+        const $ = selector => document.querySelector(selector);
+        const $$ = selector => document.querySelectorAll(selector);
+
+        let allOrders = []; // Stores the full list of orders fetched from DB
+        
+        // Helper to format item list for display
+        const formatItems = (products) => {
+            if (!products || products.length === 0) return '—';
+            return products.map(item => {
+                return `${item.qty}x ${item.name}`;
+            }).join('\n');
+        };
+
+        // Helper to escape HTML characters
+        const escape = s => {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        };
+
+        // --- Fetch Orders from DB ---
+        const fetchOrders = async (filters = {}) => {
+            $('#content').innerHTML = '<div class="loading">Loading past orders...</div>';
+            try {
+                // This calls the db:fetchPastOrders handler (with date filters)
+                allOrders = await window.electronAPI.fetchPastOrders(filters);
+                render(filterOrders()); 
+            } catch (e) {
+                $('#content').innerHTML = `<div class="empty" style="color: var(--danger);">Error loading orders: ${e.message}</div>`;
+            }
+        };
+
+        // --- Client-Side Filtering (Text Search) ---
+        const filterOrders = () => {
+            const search = $('#search').value.toLowerCase().trim();
+            if (!search) {
+                return allOrders;
+            }
+
+            return allOrders.filter(o => {
+                // Search Order ID, Table Name, Payment Mode, and Product Names
+                const itemsString = formatItems(o.products).toLowerCase();
+                const searchableText = `${o.id} ${o.desk_name} ${o.payment_mode} ${itemsString}`;
+                
+                return searchableText.includes(search);
+            });
+        };
+
+        // --- Render Orders to Table ---
+        const render = (orders) => {
+            if (!orders.length) {
+                $('#content').innerHTML = '<div class="empty">No orders match your filters.</div>';
+                return;
+            }
+
+            const html = `
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date & Time</th>
+                                <th>Table</th>
+                                <th>Total</th>
+                                <th>Payment</th>
+                                <th>Items</th>
+                               
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${orders.map(o => {
+                                // Format the date/time string
+                                const paidAt = new Date(o.paid_at).toLocaleString();
+                                const itemsHtml = formatItems(o.products);
+                                
+                                return `
+                                    <tr data-id="${o.id}">
+                                        <td class="order-id">#${o.id}</td>
+                                        <td>${paidAt}</td>
+                                        <td><span class="table-badge">${escape(o.desk_name)}</span></td>
+                                        <td class="total">Rs${o.price.toFixed(2)}</td>
+                                        <td>${escape(o.payment_mode)}</td>
+                                        <td><pre class="items-list">${itemsHtml}</pre></td>
+                                    </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            $('#content').innerHTML = html;
+        };
+
+        // --- Remove Order ---
+        // window.removeOrder = async (id) => {
+        //   if (!confirm('Delete this order permanently?')) return;
+        //   const row = document.querySelector(`tr[data-id="${id}"]`);
+        //   if (row) row.classList.add('loading');
+        //   try {
+        //     await window.electronAPI.invoke('order-remove', id); 
+            
+        //     allOrders = allOrders.filter(o => o.id !== id);
+        //     render(filterOrders());
+        //     alert('Order removed successfully!'); 
+            
+        //   } catch (e) {
+        //     alert('Remove failed: ' + e.message);
+        //   } finally {
+        //     if (row) row.classList.remove('loading');
+        //   }
+        // };
+
+        // --- Filter Events ---
+        const handleFilterChange = () => {
+            const filters = {
+                dateFrom: $('#date-from').value,
+                dateTo: $('#date-to').value,
+            };
+            // Re-fetch orders from the database with the new date range
+            fetchOrders(filters);
         }
-        return true;
-      });
-    };
-
-    // --- Render ---
-    const render = (orders) => {
-      if (!orders.length) {
-        $('#content').innerHTML = '<div class="empty">No orders match your filters.</div>';
-        return;
-      }
-
-      const html = `
-        <div style="overflow-x:auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Date & Time</th>
-                <th>Table</th>
-                <th>Total</th>
-                <th>Payment</th>
-                <th>Items</th>
-                <th>Remove</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orders.map(o => {
-                const items = (o.data.items || []).map(it =>
-                  `${it.qty}x ${escape(it.name)} ${CURRENCY}${Number(it.price * it.qty).toFixed(2)}`
-                ).join('\n');
-                return `
-                  <tr data-id="${o.id}">
-                    <td class="order-id">#${o.id}</td>
-                    <td>${new Date(o.order_date).toLocaleString()}</td>
-                    <td><span class="table-badge">${escape(o.table)}</span></td>
-                    <td class="total">${CURRENCY}${Number(o.final_total).toFixed(2)}</td>
-                    <td>${escape(o.payment_method || '-')}</td>
-                    <td>
-                      <div class="items-list">${items}</div>
-                      ${o.data.notes ? `<small class="notes">Note: ${escape(o.data.notes)}</small>` : ''}
-                    </td>
-                    <td><button class="remove-btn" onclick="removeOrder(${o.id})" title="Delete Order"><i class="fas fa-trash-alt"></i></button></td>
-                  </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>`;
-      $('#content').innerHTML = html;
-    };
-
-    const escape = s => { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; };
-
-    // --- Remove Order ---
-    window.removeOrder = async (id) => {
-      if (!confirm('Delete this order permanently?')) return;
-      const row = document.querySelector(`tr[data-id="${id}"]`);
-      if (row) row.classList.add('loading');
-      try {
-        await window.electronAPI.invoke('order-remove', id);
-        toast('Order removed', 'success');
-        allOrders = allOrders.filter(o => o.id !== id);
-        render(filterOrders());
-      } catch (e) {
-        toast('Remove failed: ' + e.message);
-      } finally {
-        if (row) row.classList.remove('loading');
-      }
-    };
-
-    // --- Filter Events ---
-    $('#date-from').addEventListener('change', () => render(filterOrders()));
-    $('#date-to').addEventListener('change', () => render(filterOrders()));
-    $('#search').addEventListener('input', () => render(filterOrders()));
-    $('#clear-filters').onclick = () => {
-      $('#date-from').value = $('#date-to').value = $('#search').value = '';
-      render(allOrders);
-    };
-
-    // --- Back ---
-    $('#back-btn').onclick = e => { e.preventDefault(); window.close(); };
-
-    // --- Start ---
-    load();
-  </script>
+        
+        // Ensure all event listeners are attached only after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Navigation and Initialization ---
+            const closeModal = () => $('#editModal').style.display = 'none';
+    window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
+    $('#back-btn').onclick = () => window.close();
+            
+            // Initial data load (fetch all paid orders)
+            fetchOrders();
+            
+            // --- Filter Attachments ---
+            // Search filter uses client-side filtering on the existing data
+            $('#search').addEventListener('input', () => render(filterOrders())); 
+            
+            // Date filters trigger a new database fetch
+            $('#date-from').addEventListener('change', handleFilterChange);
+            $('#date-to').addEventListener('change', handleFilterChange);
+            
+            // Clear filters button
+            $('#clear-filters').onclick = () => {
+                $('#date-from').value = '';
+                $('#date-to').value = '';
+                $('#search').value = '';
+                // Fetch all orders again (no date filters)
+                fetchOrders();
+            };
+        });
+    </script>
 </body>
 </html>

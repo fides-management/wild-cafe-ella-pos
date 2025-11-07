@@ -98,7 +98,9 @@
     const toast = (msg, type = 'error') => {
       const t = $('#toast'), i = $('#toast-icon'), m = $('#toast-msg');
       t.className = type;
-      i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+      // i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+      i.textContent = type === 'success' ? '✔' : '⚠️';
+
       m.textContent = msg;
       t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 3000);

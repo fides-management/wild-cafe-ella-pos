@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Login
     checkPin: (pin) => ipcRenderer.invoke('login-check-pin', pin),
 
+    loginAndNavigate: () => ipcRenderer.invoke('login-success-navigate'),
+
     // Navigation (kept as invoke for consistency with the rest of the app)
     openItemsPage: () => ipcRenderer.invoke('open-items-page'),
     openOrdersPage: () => ipcRenderer.invoke('open-orders-page'),
@@ -31,6 +33,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     updateOrderToPaid: (paymentData) =>
         ipcRenderer.invoke('db:updateOrderToPaid', paymentData),
 
+    fetchReportData: (data) => ipcRenderer.invoke('db:fetchReportData', data),
+    openReportsPage: () => ipcRenderer.invoke('open-reports-page'),
+
     // Event listener
     onDatabaseCleared: (callback) => ipcRenderer.on('database-cleared', callback),
 
@@ -40,41 +45,54 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 
     // --- FIX: ADDED TABLES & CATEGORIES LISTENERS ---
+    
+    onTablesAdded: (callback) => {
+        ipcRenderer.removeAllListeners('tables-added');
+        ipcRenderer.on('tables-added', callback);
+    },
+    
     onTablesUpdated: (callback) => {
         ipcRenderer.removeAllListeners('tables-updated');
         ipcRenderer.on('tables-updated', callback);
     },
+
     onCategoriesUpdated: (callback) => {
         ipcRenderer.removeAllListeners('categories-updated');
         ipcRenderer.on('categories-updated', callback);
     },
-
-onSettingsUpdated: (callback) => {
+    
+    // --- NEW: SETTINGS/CURRENCY LISTENER ---
+    onSettingsUpdated: (callback) => {
         ipcRenderer.removeAllListeners('settings-updated');
         ipcRenderer.on('settings-updated', callback);
     },
 
+    // ---------- Settings ----------
+    
+   getSettings: () => ipcRenderer.invoke('settings-get-all'), // Used to fetch settings
+    updateSettings: (data) => ipcRenderer.invoke('settings-update', data),
+    
+    // ... (other settings handlers)
+    
+    openSettingsPage: () => ipcRenderer.invoke('open-settings-page'),
+
+    logout: () => ipcRenderer.send("logout-and-close"),
+
+    onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', callback), // Used for real-time updates
+    fetchPastOrders: (filters) => ipcRenderer.invoke('db:fetchPastOrders', filters),
+    // ... (rest of listeners)
 });
 
 /* ------------------------------------------------------------------
-   menuAPI – product / menu CRUD
-   ------------------------------------------------------------------ */
-contextBridge.exposeInMainWorld('menuAPI', {
-    productsgetAll: () => ipcRenderer.invoke('products-get-all'),
-    getAll: () => ipcRenderer.invoke('menu-get-all'),
-    getCurrency: () => ipcRenderer.invoke('menu-get-currency'),
-    add: (item) => ipcRenderer.invoke('menu-add', item),
-    update: (item) => ipcRenderer.invoke('menu-update', item),
-    delete: (id) => ipcRenderer.invoke('menu-delete', id),
-
-    // Ensure we remove old listeners before adding a new one
-   
-});
-
-/* ------------------------------------------------------------------
-   api – categories, desks, settings
+   api – new bridge for managing non-order data (Categories/Tables/Settings)
    ------------------------------------------------------------------ */
 contextBridge.exposeInMainWorld('api', {
+    // ---------- Menu Items (CRUD) ----------
+    getAllMenuItems: () => ipcRenderer.invoke('menu-get-all'),
+    addMenuItem: (item) => ipcRenderer.invoke('menu-add', item),
+    updateMenuItem: (item) => ipcRenderer.invoke('menu-update', item),
+    deleteMenuItem: (id) => ipcRenderer.invoke('menu-delete', id),
+
     // ---------- Categories ----------
     getCategories: () => ipcRenderer.invoke('get-categories'),
     addCategory: (data) => ipcRenderer.invoke('add-category', data),

@@ -145,14 +145,19 @@
         if (!entered) return;
 
         card.classList.add('loading');
-        // This relies on the 'window.electronAPI.checkPin' provided by your Electron preload script
+        // 1. Check the PIN
         const user = await window.electronAPI.checkPin(entered);
         card.classList.remove('loading');
 
         if (user) {
-            // SUCCESS → go to POS
+            // 2. SUCCESS: Store user and notify Main Process to switch windows
             localStorage.setItem('currentUser', JSON.stringify(user));
-            window.location.href = '../index.html';
+            
+            // *** CRITICAL CHANGE HERE ***
+            // Call the IPC handler instead of changing window.location
+            await window.electronAPI.loginAndNavigate(); 
+            // The main process will now close this window and open the next one.
+            
         } else {
             // WRONG PIN
             entered = '';

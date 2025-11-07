@@ -242,14 +242,14 @@
             <button class="menu-close" onclick="toggleMenu()" aria-label="Close menu">X</button>
         </div>
         <div class="menu-items">
-            <div class="menu-item active" onclick="openItemsPage()" tabindex="0">Dashboard</div>
-            <div class="menu-item" onclick="navigateTo('reports')" tabindex="0">Sales Reports</div>
+            <!-- <div class="menu-item active" onclick="openItemsPage()" tabindex="0">Dashboard</div> -->
+            <div class="menu-item" id="open-reports-page" tabindex="0">Sales Reports</div>
      <div class="menu-item" id="past-orders-link" tabindex="0">Past Orders</div>
             <div class="menu-item" id="menu-items-link" tabindex="0">Menu Items</div>
             <div class="menu-item" id="open-categories-page" tabindex="0">Categories</div>
              <div class="menu-item" id="open-tables-page" tabindex="0">Tables</div>
             <div class="menu-item" id="open-settings-page"  tabindex="0">Settings</div>
-            <div class="menu-item" onclick="logout()" tabindex="0">Logout</div>
+            <div class="menu-item" id="logout-and-close" tabindex="0">Logout</div>
         </div>
     </div>
     <div class="menu-overlay" id="menu-overlay" onclick="toggleMenu()"></div>
@@ -322,233 +322,278 @@
                 <button class="numpad-key action-button" data-key="8">8</button>
                 <button class="numpad-key action-button" data-key="9">9</button>
                 <button class="numpad-key action-button" data-key="DEL">DEL</button>
+
                 <button class="numpad-key action-button" data-key="4">4</button>
                 <button class="numpad-key action-button" data-key="5">5</button>
                 <button class="numpad-key action-button" data-key="6">6</button>
                 <button class="numpad-key action-button" data-key="C">C</button>
+
                 <button class="numpad-key action-button" data-key="1">1</button>
                 <button class="numpad-key action-button" data-key="2">2</button>
                 <button class="numpad-key action-button" data-key="3">3</button>
-                <button class="numpad-key action-button" data-key="00">00</button>
-                <button class="numpad-key action-button" data-key="0">0</button>
                 <button class="numpad-key action-button" data-key=".">.</button>
-                <button class="numpad-key action-button key-enter btn-primary" data-key="ENTER">Enter</button>
+
+                <button class="numpad-key action-button" data-key="00" style="display: none;">00</button>
+                <button class="numpad-key action-button" data-key="0" style="grid-column: span 2;">0</button>
+                <button class="numpad-key action-button btn-primary key-enter" data-key="ENTER" style="grid-column: span 2;">ENTER</button>
             </div>
         </div>
     </div>
-
     <div class="modal" id="payment-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Payment</h3>
+                <h3>Payment for <span id="payment-modal-table"></span></h3>
                 <button class="modal-close" onclick="closeModal('payment-modal')" aria-label="Close">X</button>
             </div>
-            <div class="payment-methods-grid">
-                <button class="method-button active">Cash</button>
-                <button class="method-button">Credit</button>
-                <button class="method-button">Check</button>
+            <div class="summary-row"><span>Total Due</span> <span id="payment-total-due" class="total"></span></div>
+            
+            <label for="payment-amount">Amount Paid</label>
+            <input type="text" class="payment-input" id="payment-amount" value="0.00" onfocus="openNumpad('payment', 'decimal', 0.00)" readonly>
+
+            <label>Payment Method</label>
+            <div class="payment-methods-grid" id="payment-methods">
+                <button class="method-button active" data-method="Cash">Cash</button>
+                <button class="method-button" data-method="Card">Card</button>
+                <button class="method-button" data-method="Mobile">Mobile</button>
             </div>
-            <div class="summary-row"><span>Bill Total</span> <span id="payment-bill-total">$0.00</span></div>
-            <div class="summary-row"><span>Discount</span> <span id="payment-discount">$0.00</span></div>
-            <div class="summary-row total"><span>Payable Total</span> <span id="payment-payable-total">$0.00</span></div>
-            <input type="text" class="payment-input" id="payment-amount" placeholder="Amount Received" value="0.00" readonly readonly onclick="openNumpad('payment', 'decimal', this.value)">
-            <div class="summary-row"><span>Change Due</span> <span id="payment-change-due">$0.00</span></div>
-            <button class="action-button btn-primary" id="finish-bill-btn" onclick="handleConfirmPayment()" disabled>Finish Bill</button>
+
+            <div class="summary-row"><span>Change Due</span> <span id="payment-change" class="total">$0.00</span></div>
+            
+            <button class="action-button btn-primary" id="finish-bill-btn" onclick="handleConfirmPayment()">Finish Bill & Print</button>
         </div>
     </div>
+    <div class="notification" id="notification">Notification message</div>
 
-    <div class="notification" id="notification"></div>
-
-<script>
-        // ====================== BROWSER MOCK (For Local Testing) ======================
-        // These mocks prevent the application from crashing when run in a standard browser
-        // by replacing the Electron communication channels with console logs.
-        window.electronAPI = window.electronAPI || {
-            openItemsPage: () => console.log('Mock: Opening Menu Items Page (Requires Electron)'),
-            openOrdersPage: () => console.log('Mock: Opening Past Orders Page (Requires Electron)'),
-            invoke: (channel, ...args) => {
-                console.log(`Mock: electronAPI.invoke('${channel}', ${JSON.stringify(args)})`);
-                return Promise.resolve(); // Return a resolved promise to avoid runtime errors
-            },
-            // MOCK DB FUNCTIONS (FOR TESTING ONLY - REAL APP USES EXPOSED API)
-            fetchMenu: () => {
-                console.log('Mock: fetchMenu');
-                return Promise.resolve([
-                    { id: 1, name: 'Spicy Chicken Burger', category: 'Mains', price: 12.99, icon: 'fas fa-hamburger', code: 'B001' },
-                    { id: 2, name: 'Pepperoni Pizza', category: 'Mains', price: 15.99, icon: 'fas fa-pizza-slice', code: 'P001' },
-                    { id: 3, name: 'Espresso', category: 'Drinks', price: 3.99, icon: 'fas fa-coffee', code: 'D001' },
-                    { id: 4, name: 'Herbal Tea', category: 'Drinks', price: 2.99, icon: 'fas fa-mug-hot', code: 'D002' },
-                    { id: 5, name: 'Chocolate Cake', category: 'Desserts', price: 6.50, icon: 'fas fa-cake-candles', code: 'DE01' },
-                    { id: 6, name: 'Fried Rice', category: 'Mains', price: 10.00, icon: 'fas fa-bowl-rice', code: 'R001' },
-                    { id: 7, name: 'Soda', category: 'Drinks', price: 1.50, icon: 'fas fa-glass', code: 'D003' },
-                ]);
-            },
-            fetchTables: () => {
-                console.log('Mock: fetchTables');
-                // Tables ID need to be actual desk_id from DB. Assuming 12 desks for mock.
-                return Promise.resolve(Array.from({ length: 12 }, (_, i) => ({ id: i + 1, name: `Table ${i + 1}`, desk_id: i + 1 })));
-            },
-            fetchOngoingOrders: () => {
-                console.log('Mock: fetchOngoingOrders');
-                // Mock an ongoing order matching the expected format
-                // NOTE: 'products' is a JS array here, mimicking the expected behavior
-                return Promise.resolve([
-                    {
-                        id: 1,
-                        desk_id: 2,
-                        products: [
-                            {"id": 10, "qty": 1, "code": "B10", "name": "3", "image": "fas fa-utensils", "price": "3.00", "category": "Food"},
-                            {"id": 11, "qty": 1, "code": "B11", "name": "Burger", "image": "fas fa-utensils", "price": "3.00", "category": "Food"}
-                        ],
-                        price: '6.60',
-                        active: 'pending',
-                        discount: '0.00' // Assuming a discount field for local state management
-                    }
-                ]);
-            },
-            sendOrderToKitchen: (orderData) => {
-                console.log('Mock: sendOrderToKitchen', orderData);
-                return Promise.resolve({ success: true, new_order_id: Math.floor(Math.random() * 100) });
-            },
-            updateOrderToPaid: (paymentData) => {
-                console.log('Mock: updateOrderToPaid', paymentData);
-                return Promise.resolve({ success: true, message: 'Payment Confirmed (Mock)' });
-            },
-            // --- NEW MOCK LISTENERS START ---
-            onTablesUpdated: (callback) => console.log('Mock: Subscribing to Tables Updates'),
-            onCategoriesUpdated: (callback) => console.log('Mock: Subscribing to Categories Updates'),
-            // --- NEW MOCK LISTENERS END ---
+    <script>
+        // --- GLOBAL STATE ---
+        // REMOVED: Old hardcoded TAX_RATE, TAX_ENABLED, DISCOUNT_ENABLED
+        
+        // NEW: Dynamic global settings object
+        let globalSettings = {
+            TAX_RATE: 10, // Default 10%
+            TAX_ENABLED: true, // Default true
+            DISCOUNT_RATE: 0, // Default 0%
+            DISCOUNT_ENABLED: true, // Default true
+            CURRENCY_SYMBOL: 'Rs' // Default 'Rs'
         };
-        window.api = window.api || {
-            openCategoriesPage: () => console.log('Mock: Opening Categories Page (Requires Electron)'),
-            openTablesPage: () => console.log('Mock: Opening Tables Page (Requires Electron)'),
-        };
-        // ==============================================================================
+        
+        // Global Currency Symbol (Kept for backward compatibility with old code that might use it directly)
+        let CURRENCY_SYMBOL = globalSettings.CURRENCY_SYMBOL; 
 
-        // ---------- SETTINGS (hard-coded) ----------
-        const POS_NAME = 'Wild Cafe Ella';
-        const CURRENCY = '$';
-        const TAX_RATE = 0.10;          // 10%
-        const TAX_ENABLED = true;
-        const DISCOUNT_ENABLED = true;
-
-        // ---------- APPLICATION STATE ----------
-        let tables = [];
+        // Global variables for data storage
         let menuItems = [];
+        let tables = [];
         let ongoingOrders = [];
         let currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
-        let isProcessing = false;
-        let globalNumpadTarget = null;
-        let globalNumpadMode = null;
-        let selectedPaymentMode = 'Cash';
+        let activeCategory = 'All'; // Track the currently active category filter
+        let isProcessing = false; // Prevent double submission
+        
+        // Numpad Globals
+        let globalNumpadTarget = '';
+        let globalNumpadMode = '';
+        let selectedPaymentMode = 'Cash'; // Default payment mode
 
-        const formatCurrency = v => `${CURRENCY}${(+v).toFixed(2)}`;
-
-        // Bind Menu Links to API
-        document.getElementById('menu-items-link').addEventListener('click', () => {
-            window.electronAPI.openItemsPage();
-        });
-        document.getElementById('open-categories-page').addEventListener('click', () => {
-            window.api.openCategoriesPage();
-        });
-        document.getElementById('open-tables-page').addEventListener('click', () => {
-            window.api.openTablesPage();
-        });
-        document.getElementById('past-orders-link').addEventListener('click', () => {
-            window.electronAPI.openOrdersPage();
-        });
-         document.getElementById('open-settings-page').addEventListener('click', () => {
-            window.api.openSettingsPage();
-        });
+        // Date and Time update
+        const updateDateTime = () => {
+            const now = new Date();
+            const date = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('header-datetime').textContent = `${date} | ${time}`;
+        };
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
 
         // ---------- UI HELPERS ----------
         const toggleMenu = () => {
             document.getElementById('slide-menu').classList.toggle('open');
             document.getElementById('menu-overlay').classList.toggle('visible');
         };
-        const closeModal = id => document.getElementById(id).classList.remove('is-active');
+
+        const closeModal = id => {
+            document.getElementById(id).classList.remove('is-active');
+        };
+
         const showNotification = (msg, dur = 3000) => {
             const n = document.getElementById('notification');
-            n.textContent = msg; n.classList.add('active');
+            n.textContent = msg;
+            n.classList.add('active');
             setTimeout(() => n.classList.remove('active'), dur);
         };
+
         const navigateTo = page => showNotification(`Maps to ${page} – Placeholder for Electron Function`);
         const logout = () => showNotification('Logout – Placeholder for Electron Function');
 
+        // Nav Links
+        const openItemsPage = () => { window.electronAPI.openItemsPage(); };
+        document.getElementById('menu-items-link').addEventListener('click', () => { window.electronAPI.openItemsPage(); });
+        document.getElementById('open-categories-page').addEventListener('click', () => { window.api.openCategoriesPage(); });
+        document.getElementById('open-tables-page').addEventListener('click', () => { window.api.openTablesPage(); });
+        document.getElementById('past-orders-link').addEventListener('click', () => { window.electronAPI.openOrdersPage(); });
+        document.getElementById('open-settings-page').addEventListener('click', () => { window.api.openSettingsPage(); });
+
+
         // ---------- CALCULATIONS ----------
+        
+        /**
+         * Calculates the order summary using dynamic settings.
+         * @param {Array} items - List of order items.
+         * @param {number} disc - The manual discount amount for the current order.
+         * @returns {object} Summary object with subtotal, tax, discount, and total.
+         */
         const calculateSummary = (items, disc = 0) => {
             // FIX: Ensure items is an array to prevent "Cannot read properties of undefined (reading 'reduce')"
-            const sub = (items || []).reduce((s, i) => s + i.price * i.qty, 0); 
-            const tax = TAX_ENABLED ? sub * TAX_RATE : 0;
-            const total = Math.max(0, sub + tax - disc);
-            return { subtotal: sub, tax, discount: disc, total };
+            const sub = (items || []).reduce((s, i) => s + i.price * i.qty, 0);
+            
+            // 1. Calculate Tax dynamically
+            const taxRateDecimal = globalSettings.TAX_RATE / 100;
+            const tax = globalSettings.TAX_ENABLED ? sub * taxRateDecimal : 0;
+            
+            // 2. Apply Discount only if enabled in settings
+            const finalDiscount = globalSettings.DISCOUNT_ENABLED ? Math.max(0, disc) : 0;
+            
+            // 3. Calculate Final Total
+            const total = Math.max(0, sub + tax - finalDiscount);
+            
+            return { subtotal: sub, tax, discount: finalDiscount, total };
         };
 
-        // ---------- DATA FETCHING & SYNC ----------
-        const fetchData = async () => {
+        // UPDATED: Function to format currency using the global symbol
+        const formatCurrency = value => {
+            return `${globalSettings.CURRENCY_SYMBOL}${parseFloat(value).toFixed(2)}`;
+        };
+
+        const getKitchenNotes = () => {
+            const notes = [];
+            if (document.getElementById('less-spice').checked) notes.push('Less Spice');
+            if (document.getElementById('no-gluten').checked) notes.push('No Gluten');
+            const custom = document.getElementById('custom-note').value.trim();
+            if (custom) notes.push(custom);
+            return notes.join(' | ');
+        };
+
+        const resetKitchenNotes = () => {
+            document.getElementById('less-spice').checked = false;
+            document.getElementById('no-gluten').checked = false;
+            document.getElementById('custom-note').value = '';
+        };
+
+        const updateMenuPanelState = () => {
+            const menuPanel = document.getElementById('menu-panel');
+            if (currentOrder.tableId) {
+                menuPanel.classList.remove('disabled');
+            } else {
+                menuPanel.classList.add('disabled');
+            }
+        };
+
+        const filterMenu = (cat, tagElement) => {
+            document.querySelectorAll('.category-tag').forEach(t => t.classList.remove('active'));
+            if (tagElement) tagElement.classList.add('active');
+            activeCategory = cat;
+            renderMenuItems(document.getElementById('menu-search').value);
+        };
+
+        
+    document.addEventListener('DOMContentLoaded', () => {
+        const logoutButton = document.getElementById('logout-and-close');
+
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => {
+                // Use confirmation for user safety before closing the app
+                if (confirm('Are you sure you want to log out and close the POS?')) {
+                    // Call the exposed Electron API function
+                    // NOTE: This relies on 'window.appAPI.logout()' being defined in preload.js
+                    if (window.electronAPI && typeof window.electronAPI.logout === 'function') {
+                        window.electronAPI.logout(); 
+                    } else {
+                        console.error('Electron API for logout not available!');
+                        alert('Logout failed: System service missing.');
+                    }
+                }
+            });
+        }
+    });
+
+        // ---------- DATA FETCHING & INITIALIZATION ----------
+        
+        /**
+         * Fetches settings from DB and updates the globalSettings object.
+         */
+        const fetchSettings = async () => {
             try {
-                // Fetch All data
-                const [fetchedTables, fetchedMenu, fetchedOngoing] = await Promise.all([
-                    window.electronAPI.fetchTables(),
+                const fetchedSettings = await window.electronAPI.getSettings();
+                if (fetchedSettings) {
+                    // Update global settings object
+                    globalSettings.TAX_ENABLED = fetchedSettings.tax_enabled == 1;
+                    globalSettings.TAX_RATE = parseFloat(fetchedSettings.tax_rate) || 0;
+                    globalSettings.DISCOUNT_ENABLED = fetchedSettings.discount_enabled == 1;
+                    globalSettings.DISCOUNT_RATE = parseFloat(fetchedSettings.discount_rate) || 0;
+                    globalSettings.CURRENCY_SYMBOL = fetchedSettings.currency_symbol || '$';
+                    // Update the CURRENCY_SYMBOL variable for consistency (if needed by other code)
+                    CURRENCY_SYMBOL = globalSettings.CURRENCY_SYMBOL; 
+                } else {
+                    showNotification("Warning: Could not load settings from database. Using defaults.");
+                }
+            } catch (error) {
+                console.error("Failed to fetch settings:", error);
+                showNotification(`Error fetching settings: ${error.message}`);
+            }
+        };
+
+        const fetchData = async () => {
+            if (isProcessing) return; // Prevent concurrent fetching
+            isProcessing = true;
+            try {
+                // 1. Fetch settings first (to get currency, tax, discount rates)
+                await fetchSettings();
+
+                // 2. Fetch data from DB
+                const [fetchedMenu, fetchedTables, ongoingOrdersData] = await Promise.all([
                     window.electronAPI.fetchMenu(),
-                    window.electronAPI.fetchOngoingOrders()
+                    window.electronAPI.fetchTables(),
+                    window.electronAPI.fetchOngoingOrders(),
                 ]);
 
-                // 2. Menu Items
-                menuItems = fetchedMenu.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    category: item.category,
-                    price: parseFloat(item.price),
-                    icon: item.image || 'fas fa-utensils',
-                    code: item.code // Keep 'code' for search
+                // 3. Process Menu Items
+                // Map 'image' (from DB) to 'icon' (for UI)
+                menuItems = fetchedMenu.map(i => ({ 
+                    id: i.id, 
+                    name: i.name, 
+                    category: i.category, 
+                    price: parseFloat(i.price), 
+                    icon: i.image || 'fas fa-utensils', // Use 'image' from DB as icon class
+                    code: i.code || null // Include code 
                 }));
 
-                // 3. Ongoing Orders
-                ongoingOrders = fetchedOngoing.map(order => {
-                    
-                    // Use array directly as it's passed as an object/array from the Electron main process
-                    const rawProducts = Array.isArray(order.products) ? order.products : (order.products || []);
-                    
-                    const parsedItems = rawProducts.map(p => ({
-                        id: p.id,
+                // 4. Process Ongoing Orders
+                ongoingOrders = ongoingOrdersData.map(order => ({
+                    tableId: order.desk_id,
+                    orderId: order.id,
+                    items: order.products.map(p => ({
+                        id: parseInt(p.id),
+                        qty: parseInt(p.qty),
                         name: p.name,
                         price: parseFloat(p.price),
-                        qty: p.qty,
-                        category: p.category || 'N/A',
-                        icon: p.image || 'fas fa-utensils',
-                        code: p.code || null 
-                    }));
-
-                    // Default discount to 0 if not present in the fetched order object
-                    const orderDiscount = parseFloat(order.discount || 0); 
-
-                    // 2. Calculate summary using the parsed items
-                    const { subtotal, tax, discount, total } = calculateSummary(parsedItems, orderDiscount);
-                    // -------------------------
-
-                    return {
-                        tableId: order.desk_id,
-                        orderId: order.id,
-                        items: parsedItems,
-                        discount: orderDiscount,
-                        notes: order.notes || '',
-                        subtotal,
-                        total
-                    };
-                });
-
-                // 1. Tables: Use fetched tables, ensure a default 'open' status for UI rendering
-                tables = fetchedTables.map(t => {
+                        category: p.category,
+                        icon: p.image,
+                        code: p.code || null
+                    })),
+                    discount: 0, // Discount isn't stored on the sales record, keeping it at 0 for simplicity
+                    notes: '', // Notes aren't stored on the sales record, keeping it blank for simplicity
+                    subtotal: parseFloat(order.price) || 0, // Order price in DB is usually the subtotal/total before payment
+                    total: parseFloat(order.price) || 0,
+                }));
+                
+                // 5. Process Tables
+                tables = fetchedTables.map(t => { 
                     const ongoing = ongoingOrders.find(o => o.tableId === t.id);
-                    return {
-                        id: t.id,
-                        name: t.name || `Table ${t.id}`,
-                        status: ongoing ? 'ongoing' : 'open'
+                    return { 
+                        id: t.id, 
+                        name: t.name || `Table ${t.id}`, 
+                        status: ongoing ? 'ongoing' : 'open' 
                     };
                 });
-
-
+                
                 // Re-render UI components that depend on fetched data
                 renderCategoryTags();
                 renderMenuItems();
@@ -570,6 +615,8 @@
             } catch (error) {
                 console.error("Failed to fetch initial data:", error);
                 showNotification(`Error loading data: ${error.message}`);
+            } finally {
+                isProcessing = false;
             }
         };
 
@@ -580,81 +627,89 @@
                 fetchData();
             });
         }
-        
-        // --- PREVIOUS FIX: MENU REFRESH ---
+
+        // --- MENU REFRESH ---
         if (window.electronAPI.onMenuUpdated) {
             window.electronAPI.onMenuUpdated(() => {
                 showNotification('Menu items updated - refreshing menu and data...');
                 fetchData();
             });
         }
-        // ----------------------------------
-
-        // --- NEW REFRESH LISTENERS START (Categories & Tables/Desk) ---
+        
+        // --- TABLES/DESK REFRESH ---
         if (window.electronAPI.onTablesUpdated) {
             window.electronAPI.onTablesUpdated(() => {
-                showNotification('Tables (Desks) updated - refreshing data...');
+                showNotification('Tables list updated - refreshing data...');
                 fetchData();
             });
         }
 
         if (window.electronAPI.onCategoriesUpdated) {
             window.electronAPI.onCategoriesUpdated(() => {
-                showNotification('Categories updated - refreshing menu and data...');
+                showNotification('Categories updated - refreshing data...');
                 fetchData();
             });
         }
-        // --- NEW REFRESH LISTENERS END ---
+        
+        // NEW: SETTINGS/CURRENCY REFRESH LISTENER
+        if (window.electronAPI.onSettingsUpdated) {
+            window.electronAPI.onSettingsUpdated(async () => {
+                showNotification('Settings updated - refreshing currency, tax, and discount rates...');
+                // The safest way to handle settings changes (tax, currency) is to refetch all data.
+                await fetchData(); 
+            });
+        }
+        
+        // Initial fetch when the DOM is ready
+        document.addEventListener('DOMContentLoaded', fetchData);
+        // ----------------------------------
 
-        // ---------- TABLE SELECTION ----------
-        const selectTable = (tableId, shouldSavePrevious = true) => {
-            tableId = +tableId;
 
-            // 1. Save any active order before switching/deselecting
-            if (currentOrder.tableId !== null && shouldSavePrevious) {
+        // ---------- TABLE & ORDER MANAGEMENT ----------
+
+        const selectTable = (tableId, shouldSave = true) => {
+            const id = parseInt(tableId);
+            if (currentOrder.tableId === id && currentOrder.items.length > 0) {
+                // Do nothing if same table is clicked with active items (user may be intending to confirm the selection)
+                return;
+            }
+
+            // 1. Save old order state if necessary
+            if (currentOrder.tableId !== null && shouldSave) {
                 saveCurrentOrder(currentOrder.tableId);
             }
 
-            // 2. Deselect/Clear if the same table is clicked AND no items are present
-            const isSameTable = currentOrder.tableId === tableId;
-            if (isSameTable && currentOrder.items.length === 0) {
-                 // Explicitly remove from ongoingOrders if it was saved as an empty order
-                ongoingOrders = ongoingOrders.filter(o => o.tableId !== tableId);
-                const table = tables.find(t => t.id === tableId);
-                if (table) table.status = 'open';
-
+            if (id === currentOrder.tableId) {
+                // 2. Clear selection if re-clicking a selected table with no active items
                 currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
                 document.getElementById('mobile-table-selector').value = '';
-            } else if (isSameTable && currentOrder.items.length > 0) {
-                 // Do nothing if same table is clicked with active items (user may be intending to confirm the selection)
             } else {
                 // 3. Switch to new table
-                const existing = ongoingOrders.find(o => o.tableId === tableId);
-                
+                const existing = ongoingOrders.find(o => o.tableId === id);
                 // If existing order, load it. If not, create a new one with a null orderId (will be set on first send to kitchen)
-                currentOrder = existing ? JSON.parse(JSON.stringify(existing)) : {
-                    tableId,
-                    orderId: null, // Will be set by DB on 'Send to Kitchen'
-                    items: [],
-                    discount: 0,
-                    notes: ''
+                currentOrder = existing ? JSON.parse(JSON.stringify(existing)) : { tableId: id, orderId: null, // Will be set by DB on 'Send to Kitchen'
+                    items: [], discount: 0, notes: '' 
                 };
-                document.getElementById('mobile-table-selector').value = tableId;
+                document.getElementById('mobile-table-selector').value = id;
             }
-
+            
             const table = tables.find(t => t.id === currentOrder.tableId);
-            document.getElementById('header-table-info').textContent = currentOrder.tableId
-                ? `Table ${currentOrder.tableId}${currentOrder.orderId ? ` - Order #${currentOrder.orderId}` : ''}`
+            document.getElementById('header-table-info').textContent = currentOrder.tableId 
+                ? `Table ${currentOrder.tableId}${currentOrder.orderId ? ` - Order #${currentOrder.orderId}` : ''}` 
                 : 'Select a table to begin';
-            document.getElementById('order-table-info').textContent = currentOrder.tableId
-                ? `(Table ${currentOrder.tableId})` : '';
-
-            updateMenuPanelState(); resetKitchenNotes(); renderTables(); renderCurrentOrder();
+            document.getElementById('order-table-info').textContent = currentOrder.tableId 
+                ? `(Table ${currentOrder.tableId})` 
+                : '';
+            
+            updateMenuPanelState();
+            resetKitchenNotes();
+            renderTables();
+            renderCurrentOrder();
         };
 
         const saveCurrentOrder = tableId => {
             const orderIndex = ongoingOrders.findIndex(o => o.tableId === tableId);
-            const table = tables.find(t => t.id === tableId);
+            const table = tables.find(x => x.id === tableId);
 
             if (!currentOrder.items.length) {
                 // Only remove from ongoingOrders if it's already there (to clear an old one)
@@ -664,39 +719,110 @@
             }
 
             const { subtotal, total } = calculateSummary(currentOrder.items, currentOrder.discount);
-            currentOrder.subtotal = subtotal; currentOrder.total = total; currentOrder.notes = getKitchenNotes();
-            
+            currentOrder.subtotal = subtotal;
+            currentOrder.total = total;
+            currentOrder.notes = getKitchenNotes();
+
             // NOTE: We don't save to the *database* here, only the *local ongoingOrders* state
             // Database saving happens only in handleSendToKitchen and handleConfirmPayment.
-            
-            if (orderIndex === -1) {
-                // If it's a brand new order, push it to local state (will be synced to DB on 'Send')
-                ongoingOrders.push(JSON.parse(JSON.stringify(currentOrder)));
-            } else {
-                // Update local state
+
+            if (orderIndex > -1) {
+                // Update existing ongoing order
                 ongoingOrders[orderIndex] = JSON.parse(JSON.stringify(currentOrder));
+            } else {
+                // Add new ongoing order
+                ongoingOrders.push(JSON.parse(JSON.stringify(currentOrder)));
             }
 
-            if (table) table.status = 'ongoing';
+            if (table) table.status = currentOrder.orderId ? 'ongoing' : 'selected';
         };
 
-        const updateMenuPanelState = () => {
-            const panel = document.getElementById('menu-panel');
-            currentOrder.tableId ? panel.classList.remove('disabled') : panel.classList.add('disabled');
+        const addItemToOrder = id => {
+            if (!currentOrder.tableId) return showNotification('Select a table first!');
+
+            const item = menuItems.find(i => i.id === id);
+            
+            // Check if item already exists in the order
+            const ex = currentOrder.items.find(i => i.id === id);
+            if (ex) {
+                ex.qty++;
+            } else {
+                // Add new item, mapping properties
+                currentOrder.items.push({
+                    id: item.id,
+                    qty: 1,
+                    name: item.name,
+                    price: item.price,
+                    category: item.category,
+                    icon: item.icon, // Include icon
+                    code: item.code // Include code
+                });
+            }
+            renderCurrentOrder();
         };
 
-        // ---------- RENDERING ----------
+        const updateQuantity = (index, delta) => {
+            const item = currentOrder.items[index];
+            item.qty += delta;
+            if (item.qty <= 0) {
+                currentOrder.items.splice(index, 1);
+            }
+            renderCurrentOrder();
+        };
+
+        const removeItem = index => {
+            currentOrder.items.splice(index, 1);
+            renderCurrentOrder();
+        };
+
+        const clearCurrentOrder = () => {
+            const tid = currentOrder.tableId;
+            const t = tables.find(x => x.id === tid);
+            if (t) t.status = 'open'; // Reset table status
+            
+            // Remove from local ongoing orders state
+            ongoingOrders = ongoingOrders.filter(o => o.tableId !== tid);
+            
+            // Reset current order state (keeping tableId if selected, otherwise null)
+            currentOrder = { tableId: tid, orderId: null, items: [], discount: 0, notes: '' };
+            
+            // Update the UI
+            document.getElementById('header-table-info').textContent = 'Select a table to begin';
+            document.getElementById('order-table-info').textContent = '';
+            document.getElementById('mobile-table-selector').value = '';
+            resetKitchenNotes();
+            updateMenuPanelState();
+            renderCurrentOrder();
+            renderTables();
+        };
+
+        const renderCategoryTags = () => {
+            const cats = [...new Set(menuItems.map(i => i.category))].sort();
+            const container = document.getElementById('category-tags');
+            container.innerHTML = `<span class="category-tag active" data-category="All" onclick="filterMenu('All',this)" tabindex="0" role="button">All</span>`;
+            cats.forEach(c => {
+                const tag = document.createElement('span');
+                tag.className = 'category-tag';
+                tag.textContent = c;
+                tag.setAttribute('data-category', c);
+                tag.setAttribute('tabindex', 0);
+                tag.setAttribute('role', 'button');
+                tag.onclick = () => filterMenu(c, tag);
+                tag.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && filterMenu(c, tag);
+                container.appendChild(tag);
+            });
+            activeCategory = 'All';
+        };
+
         const renderTables = () => {
             const grid = document.getElementById('tables-grid');
             grid.innerHTML = '';
             tables.forEach(t => {
-                const ongoing = ongoingOrders.find(o => o.tableId === t.id);
-                const status = t.id === currentOrder.tableId ? 'status-selected' : (ongoing ? 'status-ongoing' : 'status-open');
                 const card = document.createElement('div');
-                card.className = `table-card-compact ${status}`;
-                card.innerHTML = `<div style="font-size:1.5rem;margin-bottom:4px;"><i class="fas fa-chair"></i></div><div>${t.name}</div>`;
-                card.tabIndex = 0; card.onclick = () => selectTable(t.id);
-                card.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && selectTable(t.id);
+                card.className = `table-card-compact status-${t.status} ${t.id === currentOrder.tableId ? 'status-selected' : ''}`;
+                card.textContent = t.name;
+                card.tabIndex = 0;
+                card.onclick = () => selectTable(t.id);
                 grid.appendChild(card);
             });
 
@@ -705,13 +831,14 @@
             sel.innerHTML = '<option value="">Select Table...</option>';
             tables.forEach(t => {
                 const opt = document.createElement('option');
-                opt.value = t.id; opt.textContent = t.name;
+                opt.value = t.id;
+                opt.textContent = t.name;
                 if (t.id === currentOrder.tableId) opt.selected = true;
                 sel.appendChild(opt);
             });
         };
 
-        const renderMenuItems = (search = '', cat = 'All') => {
+        const renderMenuItems = (search = '', cat = activeCategory) => {
             const grid = document.getElementById('menu-grid');
             grid.innerHTML = '';
             const filtered = menuItems.filter(i => {
@@ -719,13 +846,15 @@
                 // Search by name, code, or ID
                 const matchSearch = !search || 
                                     i.name.toLowerCase().includes(search.toLowerCase()) || 
-                                    (i.code && i.code.toString().toLowerCase().includes(search.toLowerCase())) ||
+                                    (i.code && i.code.toString().toLowerCase().includes(search.toLowerCase())) || 
                                     i.id.toString() === search;
                 return matchCat && matchSearch;
             });
+
             filtered.forEach(i => {
                 const card = document.createElement('div');
-                card.className = 'menu-item-card'; card.tabIndex = 0;
+                card.className = 'menu-item-card';
+                card.tabIndex = 0;
                 card.onclick = () => addItemToOrder(i.id);
                 card.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && addItemToOrder(i.id);
                 card.innerHTML = `
@@ -736,455 +865,399 @@
             });
         };
 
-        const addItemToOrder = id => {
-            if (!currentOrder.tableId) return showNotification('Select a table first!');
-            const item = menuItems.find(i => i.id === id);
-            
-            // Check if item already exists in the order
-            const ex = currentOrder.items.findIndex(i => i.id === id);
-            if (ex > -1) {
-                currentOrder.items[ex].qty++;
-            } else {
-                // Ensure all necessary properties (like code and icon) are carried over from menuItems
-                currentOrder.items.push({ 
-                    id: item.id, 
-                    name: item.name, 
-                    category: item.category, 
-                    price: item.price, 
-                    icon: item.icon, 
-                    code: item.code, 
-                    qty: 1 
-                });
-            }
-            renderCurrentOrder();
-        };
-        const removeItem = idx => { currentOrder.items.splice(idx, 1); renderCurrentOrder(); };
-        const updateQuantity = (idx, delta) => {
-            currentOrder.items[idx].qty += delta;
-            if (currentOrder.items[idx].qty <= 0) removeItem(idx);
-            else renderCurrentOrder();
-        };
-
         const renderCurrentOrder = () => {
             const list = document.getElementById('current-order-list');
             list.innerHTML = '';
+
             if (!currentOrder.items.length) {
                 list.innerHTML = '<li id="empty-order-placeholder">No items added yet.</li>';
-                document.getElementById('summary-subtotal').textContent = formatCurrency(0);
-                document.getElementById('summary-tax').textContent = formatCurrency(0);
-                document.getElementById('summary-discount').textContent = formatCurrency(0);
-                document.getElementById('summary-total').textContent = formatCurrency(0);
-                document.getElementById('tax-row').style.display = TAX_ENABLED ? 'flex' : 'none';
-                document.getElementById('discount-row').style.display = DISCOUNT_ENABLED ? 'flex' : 'none';
-                return;
+            } else {
+                currentOrder.items.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'order-item';
+                    const itemTotal = item.price * item.qty;
+                    li.innerHTML = `
+                        <div class="item-details">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-price">${formatCurrency(item.price)}</div>
+                        </div>
+                        <div class="qty-controls">
+                            <button class="qty-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                            <span class="qty-value" onclick="openNumpad('qty', 'integer', ${item.qty}, ${index})">${item.qty}</span>
+                            <button class="qty-btn" onclick="updateQuantity(${index}, -1)">-</button>
+                        </div>
+                        <div class="item-total" style="font-weight: 600;">${formatCurrency(itemTotal)}</div>
+                        <button class="remove-btn" onclick="removeItem(${index})">X</button>
+                    `;
+                    list.appendChild(li);
+                });
             }
+
+            // Update Summary
             const { subtotal, tax, discount, total } = calculateSummary(currentOrder.items, currentOrder.discount);
-            currentOrder.items.forEach((it, i) => {
-                const li = document.createElement('li');
-                li.className = 'order-item';
-                li.innerHTML = `
-                    <div><strong>${it.name}</strong></div>
-                    <div class="qty-controls">
-                        <button class="qty-btn" onclick="updateQuantity(${i},1)" aria-label="Increase">+</button>
-                        <span class="qty-value" onclick="openNumpad('qty','integer',${it.qty},${i})" tabindex="0" role="button">${it.qty}</span>
-                        <button class="qty-btn" onclick="updateQuantity(${i},-1)" aria-label="Decrease">−</button>
-                    </div>
-                    <div style="text-align:right;font-weight:600;">${formatCurrency(it.price * it.qty)}</div>
-                    <button class="remove-btn" onclick="removeItem(${i})" aria-label="Remove">×</button>`;
-                list.appendChild(li);
-            });
             document.getElementById('summary-subtotal').textContent = formatCurrency(subtotal);
             document.getElementById('summary-tax').textContent = formatCurrency(tax);
             document.getElementById('summary-discount').textContent = formatCurrency(discount);
             document.getElementById('summary-total').textContent = formatCurrency(total);
-            document.getElementById('tax-row').style.display = TAX_ENABLED ? 'flex' : 'none';
-            document.getElementById('discount-row').style.display = DISCOUNT_ENABLED ? 'flex' : 'none';
+            
+            // DYNAMICALLY UPDATE TAX ROW
+            const taxRow = document.getElementById('tax-row');
+            taxRow.querySelector('span:first-child').textContent = `Tax (${globalSettings.TAX_RATE}%)`;
+            taxRow.style.display = globalSettings.TAX_ENABLED ? 'flex' : 'none';
+            
+            // DYNAMICALLY UPDATE DISCOUNT ROW
+            const discountRow = document.getElementById('discount-row');
+            discountRow.style.display = globalSettings.DISCOUNT_ENABLED ? 'flex' : 'none';
         };
 
         // ---------- NUMPAD ----------
-        const openNumpad = (target, mode, init = 0, idx = null) => {
+        let numpadCallback = null;
+        let numpadTargetElement = null;
+
+        const openNumpad = (target, mode, init = 0, idx = null, elementId = null) => {
             closeModal('payment-modal');
-            globalNumpadTarget = target; globalNumpadMode = mode;
+            globalNumpadTarget = target;
+            globalNumpadMode = mode;
+            
+            // Use elementId if passed, otherwise fall back to global Numpad Display
+            numpadTargetElement = elementId ? document.getElementById(elementId) : document.getElementById('numpad-display');
+
             const disp = document.getElementById('numpad-display');
             const title = document.getElementById('numpad-title');
-            title.textContent = target === 'qty' ? 'Enter Quantity' :
-                               target === 'discount' ? 'Enter Discount' :
-                               target === 'payment' ? 'Enter Payment Amount' :
-                               target === 'search' ? 'Enter Item ID/Code' : 'Enter Value';
-            let val = mode === 'integer' ? (parseInt(init) || 0).toString() :
-                      mode === 'decimal' ? (parseFloat(init) === 0 ? '0' : (parseFloat(init) || 0).toString()) : (init || '');
+            
+            title.textContent = target === 'qty' ? 'Enter Quantity' 
+                : target === 'discount' ? 'Enter Discount' 
+                : target === 'payment' ? 'Enter Payment Amount' 
+                : target === 'search' ? 'Enter Item ID/Code' 
+                : 'Enter Value';
+            
+            let val = mode === 'integer' ? (parseInt(init) || 0).toString() 
+                : mode === 'decimal' ? (parseFloat(init) === 0 ? '0' : (parseFloat(init) || 0).toString()) 
+                : (init || '');
+            
             disp.textContent = val;
+
             document.getElementById('numpad-modal').setAttribute('data-item-index', idx ?? '');
+            
             document.querySelectorAll('.numpad-key[data-key="."], .numpad-key[data-key="00"]')
                 .forEach(b => b.style.display = mode === 'decimal' ? 'block' : 'none');
+            
             setTimeout(() => document.getElementById('numpad-modal').classList.add('is-active'), 10);
         };
 
         const handleNumpadInput = (key, cur) => {
+            if (key === 'C') return '0';
+            if (key === 'DEL') return cur.slice(0, -1) || '0';
+            
+            if (cur === '0' && key !== '0' && key !== '00' && key !== '.') cur = '';
+            if (cur === '-0' && key !== '0' && key !== '00' && key !== '.') cur = '-';
+            
             if (globalNumpadMode === 'integer') {
-                if (key === 'C') return '0';
-                if (key === 'DEL') {
-                    // FIX 3: Ensure DEL returns an empty string for search target when fully cleared, not '0'
-                    if (globalNumpadTarget === 'search' && cur.length <= 1) return ''; 
-                    return cur.length > 1 ? cur.slice(0, -1) : '0';
-                }
-                if (key === 'ENTER') return cur;
-                if (!/^[0-9]$/.test(key)) {
-                    // Allow letters and symbols for 'search' in integer mode (for product codes)
-                    if (globalNumpadTarget === 'search' && /^[a-zA-Z\s\-]+$/.test(key)) {
-                        return cur + key;
-                    }
-                    return cur;
-                }
-                return (cur === '0' ? key : cur + key).replace(/^0+(?=\d)/, '');
-            }
-            if (globalNumpadMode === 'decimal') {
-                if (key === 'C') return '0';
-                if (key === 'DEL') {
-                    const nv = cur.length > 1 ? cur.slice(0, -1) : '0';
-                    return nv.endsWith('.') ? nv.slice(0, -1) : nv;
-                }
-                if (key === 'ENTER') return cur;
+                if (key === '.') return cur;
+                if (key === '00') key = '0';
+                return cur + key;
+
+            } else if (globalNumpadMode === 'decimal') {
                 if (key === '.') {
-                    if (!cur.includes('.')) return cur === '' ? '0.' : cur + '.';
-                    return cur;
+                    return cur.includes('.') ? cur : cur + '.';
                 }
-                if (/^[0-9]$/.test(key) || key === '00') {
-                    let add = key === '00' ? '00' : key;
-                    if (cur === '0') {
-                        if (key === '0' || key === '00') return '0';
-                        return key;
-                    }
+                if (key === '00') {
+                    if (cur === '0') return cur;
                     if (cur.includes('.')) {
-                        const [i, d] = cur.split('.');
-                        const newDec = (d || '').length + add.length;
-                        if (newDec > 2) {
-                            if (key === '00' && (d || '').length === 1) add = '0';
-                            else return cur;
-                        }
+                        const [w, d] = cur.split('.');
+                        if (d.length >= 2) return cur;
+                        let add = '00'.slice(0, 2 - d.length);
+                        return cur + add;
                     }
-                    return cur + add;
                 }
+                
+                // Max 2 decimal places
+                if (cur.includes('.')) {
+                    const [w, d] = cur.split('.');
+                    if (d.length >= 2) return cur;
+                }
+                
+                return cur + key;
             }
-            return cur;
+            return cur + key;
         };
-
-        document.getElementById('menu-search').addEventListener('click', e => { e.preventDefault(); openNumpad('search', 'integer', document.getElementById('menu-search').value || ''); });
         
-        // Discount click handler (add or modify if you need to open numpad for discount)
-        document.getElementById('summary-discount').parentElement.addEventListener('click', () => {
-            if (DISCOUNT_ENABLED && currentOrder.tableId) {
-                 openNumpad('discount', 'decimal', currentOrder.discount);
-            }
-        });
-
+        // Numpad key event listener
         document.querySelectorAll('.numpad-key').forEach(k => k.addEventListener('click', () => {
             const disp = document.getElementById('numpad-display');
             const cur = disp.textContent;
             const key = k.dataset.key;
+
             if (key === 'ENTER') {
                 let val = disp.textContent;
-                // Corrected index access from dataset.item-index to dataset.itemIndex
-                const idx = document.getElementById('numpad-modal').dataset.itemIndex; 
-                if (globalNumpadMode === 'integer') {
-                    if (globalNumpadTarget === 'qty' && idx !== '') {
-                        const numVal = parseInt(val) || 0;
-                        if (numVal <= 0) currentOrder.items.splice(idx, 1);
-                        else currentOrder.items[idx].qty = numVal;
-                        renderCurrentOrder();
-                    } else if (globalNumpadTarget === 'search') {
-                        document.getElementById('menu-search').value = val;
-                        const active = document.querySelector('.category-tag.active');
-                        filterMenu(active ? active.dataset.category : 'All', active);
-                    }
-                } else if (globalNumpadMode === 'decimal') {
+                const idx = document.getElementById('numpad-modal').dataset.itemIndex;
+
+                if (globalNumpadTarget === 'qty' && idx !== '') {
+                    const numVal = parseInt(val) || 0;
+                    if (numVal <= 0) currentOrder.items.splice(idx, 1);
+                    else currentOrder.items[idx].qty = numVal;
+                    renderCurrentOrder();
+                } else if (globalNumpadTarget === 'search') {
+                    document.getElementById('menu-search').value = val;
+                    const active = document.querySelector('.category-tag.active');
+                    filterMenu(active ? active.dataset.category : 'All', active);
+                } else if (globalNumpadTarget === 'payment') {
                     const num = parseFloat(val) || 0;
                     val = num.toFixed(2);
-                    if (globalNumpadTarget === 'payment') {
-                        document.getElementById('payment-amount').value = Math.max(0, num).toFixed(2);
-                        updatePaymentModal(); 
-                        closeModal('numpad-modal');
-                        // Re-open payment modal after Numpad entry
-                        setTimeout(() => document.getElementById('payment-modal').classList.add('is-active'), 100);
-                        return; 
-                    } else if (globalNumpadTarget === 'discount') {
-                        currentOrder.discount = Math.max(0, num) || 0;
-                        renderCurrentOrder();
-                    }
+                    document.getElementById('payment-amount').value = val;
+                    // Auto-update change due
+                    const totalDueText = document.getElementById('payment-total-due').textContent;
+                    // Use globalSettings.CURRENCY_SYMBOL for replacement
+                    const totalDue = parseFloat(totalDueText.replace(new RegExp(`^${globalSettings.CURRENCY_SYMBOL.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`), ''));
+                    const change = (num - totalDue).toFixed(2);
+                    document.getElementById('payment-change').textContent = formatCurrency(change);
+                } else if (globalNumpadTarget === 'discount') {
+                    const num = parseFloat(val) || 0;
+                    currentOrder.discount = Math.max(0, num);
+                    renderCurrentOrder();
                 }
+
                 closeModal('numpad-modal');
+                // Re-open payment modal if target was 'payment'
+                if (globalNumpadTarget === 'payment') {
+                    document.getElementById('payment-modal').classList.add('is-active');
+                }
+
             } else {
                 disp.textContent = handleNumpadInput(key, cur);
             }
         }));
-        
-        // Handle menu search by code/ID input directly
-        document.getElementById('menu-search').addEventListener('input', (e) => {
-            const search = e.target.value.trim();
-            const activeTag = document.querySelector('.category-tag.active');
-            const cat = activeTag ? activeTag.dataset.category : 'All';
-            renderMenuItems(search, cat);
+
+        // Menu Search Click Handler
+        document.getElementById('menu-search').addEventListener('click', e => {
+            e.preventDefault();
+            openNumpad('search', 'integer', document.getElementById('menu-search').value || '');
         });
 
-        // ---------- KITCHEN & PAYMENT INTEGRATION ----------
-        const getKitchenNotes = () => {
-            const notes = [];
-            if (document.getElementById('less-spice').checked) notes.push('Less Spice');
-            if (document.getElementById('no-gluten').checked) notes.push('No Gluten');
-            const cust = document.getElementById('custom-note').value.trim();
-            if (cust) notes.push(cust);
-            return notes.join(', ');
-        };
-        const resetKitchenNotes = () => {
-            document.getElementById('less-spice').checked = false;
-            document.getElementById('no-gluten').checked = false;
-            document.getElementById('custom-note').value = '';
-        };
-
-        const handleSendToKitchen = async () => {
-            if (isProcessing) return;
-            if (!currentOrder.tableId || !currentOrder.items.length) return showNotification('Select a table and add items first!');
-            
-            isProcessing = true;
-            try {
-                const notes = getKitchenNotes();
-                const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
-                
-                // Prepare the data to be saved to the `sales` table
-                const orderData = {
-                    desk_id: currentOrder.tableId,
-                    price: total.toFixed(2),
-                    products: currentOrder.items.map(item => ({
-                        id: item.id,
-                        qty: item.qty,
-                        code: item.code || null, // Include 'code' from menu items
-                        name: item.name,
-                        image: item.icon,
-                        price: item.price.toFixed(2),
-                        category: item.category
-                    })),
-                };
-                
-                if (currentOrder.orderId) {
-                    // This section is for updating an existing PENDING order.
-                    // Since a dedicated 'db:updateOrder' is not in the db.js snippet, we skip the DB update here
-                    // and rely on local state management and a broadcast for other windows.
-                    saveCurrentOrder(currentOrder.tableId);
-                    showNotification('Order updated locally and sent to kitchen printer.');
-                    // You might want to call window.electronAPI.invoke('db:updateOrder', orderData) if available
-                } else {
-                    // Save new order to DB (active = 'pending' in db.js)
-                    const result = await window.electronAPI.sendOrderToKitchen(orderData);
-                    
-                    if (result.success) {
-                        currentOrder.orderId = result.new_order_id;
-                        currentOrder.notes = notes;
-                        saveCurrentOrder(currentOrder.tableId); // Save to local state with new ID
-                        const t = tables.find(x => x.id === currentOrder.tableId);
-                        if (t) t.status = 'ongoing';
-                        renderTables(); // Update table status in UI
-                        showNotification(`Order #${currentOrder.orderId} sent to kitchen!`);
-                    } else {
-                        showNotification(`Error: ${result.message}`);
-                    }
-                }
-                resetKitchenNotes();
-
-            } catch (error) {
-                console.error("Error sending order to kitchen:", error);
-                showNotification(`Failed to send order: ${error.message}`);
-            } finally {
-                isProcessing = false;
+        // Discount click handler
+        // UPDATED: Check globalSettings.DISCOUNT_ENABLED before opening Numpad
+        document.getElementById('summary-discount').parentElement.addEventListener('click', () => {
+            if (globalSettings.DISCOUNT_ENABLED && currentOrder.tableId) {
+                openNumpad('discount', 'decimal', currentOrder.discount);
+            } else if (!globalSettings.DISCOUNT_ENABLED) {
+                showNotification('Discount feature is disabled in settings.');
             }
-        };
+        });
+
+
+        // ---------- ORDER ACTIONS ----------
+       const handleSendToKitchen = async () => {
+        if (isProcessing || !currentOrder.tableId || !currentOrder.items.length) {
+            return showNotification('Add items to an order and select a table first!');
+        }
+
+        isProcessing = true;
+        try {
+            const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
+            const notes = getKitchenNotes();
+
+            const orderData = {
+                desk_id: currentOrder.tableId,
+                price: total.toFixed(2),
+                products: currentOrder.items.map(item => ({
+                    id: item.id,
+                    qty: item.qty,
+                    code: item.code || null,
+                    name: item.name,
+                    image: item.icon,
+                    price: item.price.toFixed(2),
+                    category: item.category
+                })),
+                notes: notes,
+            };
+
+            if (currentOrder.orderId) {
+                // Update existing PENDING order (only locally in this mock, but normally a DB update is needed)
+                saveCurrentOrder(currentOrder.tableId); 
+                
+                // FIX: Notification for update should show quickly
+                showNotification('Order updated locally and sent to kitchen printer.'); 
+                
+            } else {
+                // Save new order to DB (active = 'pending')
+                const result = await window.electronAPI.sendOrderToKitchen(orderData);
+                if (result.success) {
+                    currentOrder.orderId = result.new_order_id;
+                    currentOrder.notes = notes;
+                    saveCurrentOrder(currentOrder.tableId); // Save to local state with new ID
+                    const t = tables.find(x => x.id === currentOrder.tableId);
+                    if (t) t.status = 'ongoing';
+                    renderTables(); // Update table status in UI
+                    
+                    // FIX: Show notification immediately after data is updated/saved
+                    showNotification(`Order #${currentOrder.orderId} sent to kitchen!`);
+                    
+                } else {
+                    showNotification(`Error: ${result.message}`);
+                }
+            }
+            
+            // NEW FIX: Open the kitchen print window AFTER the notification to prevent delay
+            // This assumes you have a print functionality that opens a new window:
+            const win = window.open('print/kitchen-ticket.html', '_blank', 'width=400,height=600');
+            win.onload = () => win.postMessage({ type: 'kitchen-ticket', order: JSON.parse(JSON.stringify(currentOrder)) /* other data */ }, '*');
+
+            resetKitchenNotes();
+
+        } catch (error) {
+            console.error("Error sending order to kitchen:", error);
+            showNotification(`Failed to send order: ${error.message}`);
+        } finally {
+            isProcessing = false;
+        }
+    };
 
         const openPaymentModal = () => {
-            if (!currentOrder.tableId || !currentOrder.items.length) return showNotification('Add items before payment!');
-            if (!currentOrder.orderId) return showNotification('Send order to kitchen before finalizing payment!');
-
-            // Initialize payment amount to 0.00 to force numpad entry via Finish Bill
-            document.getElementById('payment-amount').value = '0.00'; 
-
-            updatePaymentModal();
-            document.getElementById('payment-modal').classList.add('is-active');
+            if (!currentOrder.tableId || !currentOrder.items.length) return showNotification('Add items and select a table first!');
             
-            // Set up payment method buttons
-            document.querySelectorAll('.method-button').forEach(btn => {
+            // Recalculate total just in case
+            const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
+            
+            document.getElementById('payment-modal-table').textContent = `Table ${currentOrder.tableId}`;
+            document.getElementById('payment-total-due').textContent = formatCurrency(total);
+            document.getElementById('payment-amount').value = total.toFixed(2); // Prefill with total
+            document.getElementById('payment-change').textContent = formatCurrency(0); // Change is 0 initially
+            
+            // Set default payment mode to 'Cash' and reset buttons
+            selectedPaymentMode = 'Cash';
+            document.querySelectorAll('#payment-methods .method-button').forEach(btn => {
                 btn.classList.remove('active');
-                if (btn.textContent === selectedPaymentMode) {
-                    btn.classList.add('active');
-                }
+                if (btn.dataset.method === 'Cash') btn.classList.add('active');
                 btn.onclick = () => {
-                    document.querySelectorAll('.method-button').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#payment-methods .method-button').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    selectedPaymentMode = btn.textContent;
+                    selectedPaymentMode = btn.dataset.method;
+                    // Recalculate change on method change if amount paid is still total due
+                    const paid = parseFloat(document.getElementById('payment-amount').value);
+                    const change = (paid - total).toFixed(2);
+                    document.getElementById('payment-change').textContent = formatCurrency(change);
                 };
             });
-        };
-        
-        const updatePaymentModal = () => {
-            const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
-            const paid = parseFloat(document.getElementById('payment-amount').value) || 0;
-            const change = Math.max(0, paid - total);
             
-            document.getElementById('payment-bill-total').textContent = formatCurrency(total);
-            document.getElementById('payment-discount').textContent = formatCurrency(currentOrder.discount);
-            document.getElementById('payment-payable-total').textContent = formatCurrency(total);
-            document.getElementById('payment-change-due').textContent = formatCurrency(change);
-            
-            const btn = document.getElementById('finish-bill-btn');
-            // Button is enabled only if paid amount is >= total
-            btn.disabled = paid < total || isProcessing || isNaN(paid);
+            document.getElementById('finish-bill-btn').disabled = false;
+            document.getElementById('payment-modal').classList.add('is-active');
         };
 
-        const handleConfirmPayment = async () => {
-            if (isProcessing) return;
+      const handleConfirmPayment = async () => {
+    if (isProcessing) return;
+    const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
+    const paid = parseFloat(document.getElementById('payment-amount').value);
+    
+    // --- ADDED: Calculate change amount needed for paymentData ---
+    const change = paid - total; 
 
-            const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
-            const paid = parseFloat(document.getElementById('payment-amount').value) || 0;
+    if (paid < total || isNaN(paid)) {
+        // If amount paid is less than total, open the Numpad to force entry
+        closeModal('payment-modal');
+        openNumpad('payment', 'decimal', document.getElementById('payment-amount').value);
+        return; // Stop processing and wait for Numpad entry
+    }
 
-            // If payment is insufficient (0.00 on first click), open the Numpad
-            if (paid < total || isNaN(paid)) {
-                // Closes the payment modal and opens the numpad
-                closeModal('payment-modal'); 
-                openNumpad('payment', 'decimal', '0'); 
-                return; // Stop processing and wait for Numpad entry
-            }
-            
-            if (!currentOrder.orderId) {
-                showNotification('Order must be sent to kitchen first!'); return;
-            }
-            
-            isProcessing = true;
-            const btn = document.getElementById('finish-bill-btn'); btn.disabled = true;
+    if (!currentOrder.orderId) {
+        // Should not happen if Send to Kitchen is followed, but as a safeguard:
+        showNotification('Order must be sent to kitchen first!');
+        return;
+    }
 
-            try {
-                const paymentData = {
-                    order_id: currentOrder.orderId,
-                    payment_mode: selectedPaymentMode 
-                };
-                
-                // Call db:updateOrderToPaid (updates active = 'paid' in db.js)
-                const result = await window.electronAPI.updateOrderToPaid(paymentData);
-                
-                if (result.success) {
-                    const change = paid - total;
-                    
-                    // Mock: Log the final receipt data
-                    console.log('--- FINAL RECEIPT ---', {
-                        order: JSON.parse(JSON.stringify(currentOrder)),
-                        payment: { paid, change, method: selectedPaymentMode, total, tax_rate: (TAX_RATE * 100).toFixed(1) },
-                    });
+    isProcessing = true;
+    const btn = document.getElementById('finish-bill-btn');
+    btn.disabled = true;
 
-                    closeModal('payment-modal');
-
-                    // Reset local state after successful payment
-                    ongoingOrders = ongoingOrders.filter(o => o.tableId !== currentOrder.tableId);
-                    const t = tables.find(x => x.id === currentOrder.tableId);
-                    if (t) t.status = 'open';
-                    currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
-                    document.getElementById('header-table-info').textContent = 'Select a table to begin';
-                    document.getElementById('order-table-info').textContent = '';
-                    document.getElementById('mobile-table-selector').value = '';
-                    resetKitchenNotes(); updateMenuPanelState(); renderTables(); renderCurrentOrder();
-
-                    showNotification('Payment completed!');
-                } else {
-                    showNotification(result.message);
-                }
-            } catch (error) {
-                console.error("Error confirming payment:", error);
-                showNotification(`Payment failed: ${error.message}`);
-            } finally {
-                isProcessing = false;
-                btn.disabled = false;
-            }
+    try {
+        const paymentData = { 
+            order_id: currentOrder.orderId, 
+            payment_mode: selectedPaymentMode,
+            // --- FIX: Pass the amount paid and change amount to the main process handler ---
+            amount_paid: paid,
+            change_amount: change,
         };
 
-        const clearCurrentOrder = () => {
-            if (!currentOrder.tableId) {
-                 // Clear just the temporary items if no table is selected
-                 currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
-                 renderCurrentOrder();
-                 return;
-            }
+        // Call db:updateOrderToPaid (updates active = 'paid' in db.js)
+        const result = await window.electronAPI.updateOrderToPaid(paymentData);
 
-            // Check if there is an ongoing DB order
-            const isSavedOrder = ongoingOrders.some(o => o.tableId === currentOrder.tableId);
-            const confirmMsg = isSavedOrder ? 
-                `This order (#${currentOrder.orderId}) has been sent to the kitchen. Are you sure you want to clear and discard it?` :
-                `Clear all items from Table ${currentOrder.tableId}?`;
+        if (result.success) {
+            // NOTE: The 'const change = paid - total;' line below is now redundant, 
+            // but is left for minimal change, as it was in the success block. 
+            // The value 'change' is available from the scope above.
+            // const change = paid - total; 
 
-            if (!currentOrder.items.length || !confirm(confirmMsg)) return;
+            // Mock: Log the final receipt data
+            console.log('--- FINAL RECEIPT ---', {
+                order: JSON.parse(JSON.stringify(currentOrder)),
+                payment: { 
+                    paid, 
+                    change, // Uses the 'change' value from the scope above
+                    method: selectedPaymentMode, 
+                    total, 
+                    // Use dynamic settings for tax rate
+                    tax_rate: globalSettings.TAX_ENABLED ? globalSettings.TAX_RATE.toFixed(1) : 0, 
+                },
+            });
 
-            // If it's a DB order, you should likely call a DB function to 'cancel' or 'remove' it.
-            // Since that function isn't provided, we'll just clear the local state and reset the table.
-            if (isSavedOrder) {
-                 console.log(`--- MOCK DB CANCEL/REMOVE ORDER --- Order ID ${currentOrder.orderId}`);
-                 ongoingOrders = ongoingOrders.filter(o => o.tableId !== currentOrder.tableId);
-            }
+            closeModal('payment-modal');
             
-            const tid = currentOrder.tableId;
+            // Reset local state after successful payment
+            ongoingOrders = ongoingOrders.filter(o => o.tableId !== currentOrder.tableId);
+            const t = tables.find(x => x.id === currentOrder.tableId);
+            if (t) t.status = 'open';
+            
             currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
-            
-            // Update the UI
+
             document.getElementById('header-table-info').textContent = 'Select a table to begin';
             document.getElementById('order-table-info').textContent = '';
             document.getElementById('mobile-table-selector').value = '';
-            resetKitchenNotes(); updateMenuPanelState(); renderCurrentOrder();
-            
-            const table = tables.find(t => t.id === tid);
-            if (table) table.status = 'open';
+            resetKitchenNotes();
+            updateMenuPanelState();
             renderTables();
-        };
+            renderCurrentOrder();
+            showNotification(`Bill finalized! Change: ${formatCurrency(change)}`);
+            const win = window.open('print/receipt.html', '_blank', 'width=400,height=600');
+            win.onload = () => win.postMessage({ type: 'shop-ticket', order: JSON.parse(JSON.stringify(currentOrder)) /* other data */ }, '*');
+        } else {
+            showNotification(`Error: ${result.message}`);
+            btn.disabled = false; // Re-enable button on error
+        }
+    } catch (error) {
+        console.error("Error confirming payment:", error);
+        showNotification(`Failed to process payment: ${error.message}`);
+        btn.disabled = false;
+    } finally {
+        isProcessing = false;
+    }
+};
+document.getElementById('open-reports-page').addEventListener('click', () => { 
+        // Tell Electron (via preload.js) to open the new reports window
+        window.electronAPI.openReportsPage();
+});
 
-        const renderCategoryTags = () => {
-            const cats = [...new Set(menuItems.map(i => i.category))].sort();
-            const container = document.getElementById('category-tags');
-            container.innerHTML = `<span class="category-tag active" data-category="All" onclick="filterMenu('All',this)" tabindex="0" role="button">All</span>`;
-            cats.forEach(c => {
-                const tag = document.createElement('span');
-                tag.className = 'category-tag'; tag.textContent = c; tag.tabIndex = 0;
-                tag.setAttribute('data-category', c);
-                tag.onclick = e => filterMenu(c, e.target);
-                tag.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && filterMenu(c, e.target);
-                container.appendChild(tag);
-            });
-        };
-        const filterMenu = (cat, el) => {
-            document.querySelectorAll('.category-tag').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
-            // Ensure search input value is used when filtering by category
-            renderMenuItems(document.getElementById('menu-search').value, cat);
-        };
 
-        // ---------- INITIALISATION ----------
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!localStorage.getItem('pos_welcome_shown')) {
-                showNotification('Welcome to Wild Cafe Ella POS!');
-                localStorage.setItem('pos_welcome_shown', '1');
+        // Keyboard navigation helpers
+        document.addEventListener('keydown', e => {
+            // Escape key closes open modals/menus
+            if (e.key === 'Escape') {
+                if (document.getElementById('slide-menu').classList.contains('open')) toggleMenu();
+                if (document.getElementById('numpad-modal').classList.contains('is-active')) closeModal('numpad-modal');
+                if (document.getElementById('payment-modal').classList.contains('is-active')) closeModal('payment-modal');
             }
-            const updateDT = () => {
-                const now = new Date();
-                const opts = { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
-                document.getElementById('header-datetime').textContent = now.toLocaleString('en-US', opts).replace(',', ' •');
-            };
-            updateDT(); setInterval(updateDT, 60_000);
-
-            // Fetch data from DB on load
-            fetchData();
-            
-            updateMenuPanelState(); // Initialize menu panel state
-            renderCurrentOrder(); // Initialize empty order summary
-
-            document.addEventListener('keydown', e => {
-                if (e.key === 'Escape') {
-                    if (document.getElementById('slide-menu').classList.contains('open')) toggleMenu();
-                    if (document.getElementById('numpad-modal').classList.contains('is-active')) closeModal('numpad-modal');
-                    if (document.getElementById('payment-modal').classList.contains('is-active')) closeModal('payment-modal');
-                }
-            });
         });
+async function loadTables() {
+    try {
+        // Fetch the list of tables from your database through Electron IPC
+        tables = await window.api.getDesk(); // <-- this should exist in your preload/main
+
+        // Then re-render the table cards
+        renderTables();
+    } catch (err) {
+        console.error("Failed to load tables:", err);
+    }
+}
+   
+
 
         // expose for inline handlers
         window.selectTable = selectTable;
@@ -1210,6 +1283,7 @@
             if (user && userInfoElement) {
                 userInfoElement.textContent = `Logged in as: ${user.name}`;
             }
+            loadTables();
         });
     </script>
 </body>

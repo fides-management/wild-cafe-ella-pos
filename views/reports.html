@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Analytics</title>
+    <style>
+        /* Define CSS Variables */
+        :root {
+            --primary: #00d1b2; /* Bulma info-like color */
+            --info: #3273dc; /* Standard Bulma info color */
+            --bg-light: #f8fafc;
+            --text-dark: #363636;
+            --shadow-elevated: 0 10px 15px rgba(0,0,0,0.1), 0 0 5px rgba(0,0,0,0.05);
+            --border-light: #dbdbdb;
+        }
+
+        /* Basic Setup and Resets */
+        body { 
+            background-color: var(--bg-light); 
+            padding: 40px 20px; 
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Main Container Styling (Using .box for Bulma-like card) */
+        .box { 
+            margin: auto; 
+            max-width: 700px; /* Slightly narrower for focus */
+            width: 100%;
+            padding: 30px; 
+            background-color: white; 
+            border-radius: 12px; 
+            box-shadow: var(--shadow-elevated); 
+            border-top: 5px solid var(--info); /* Feature border */
+        }
+
+        /* Typography Styles */
+        .title { 
+            font-size: 2rem; 
+            font-weight: 700; 
+            color: var(--text-dark); 
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            font-size: 1rem;
+            color: #6a6a6a;
+            margin-bottom: 1.5rem;
+        }
+        .has-text-centered { text-align: center; }
+
+        /* Form Elements (Date Picker & Label) */
+        .label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+        .field.has-addons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .control { margin: 0 5px; }
+        .input[type="date"] {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        .input[type="date"]:focus {
+            border-color: var(--info);
+            box-shadow: 0 0 0 0.125em rgba(50, 115, 220, 0.25);
+            outline: none;
+        }
+        .button.is-static {
+            background-color: #ededed;
+            color: #7a7a7a;
+            border: 1px solid var(--border-light);
+            cursor: default;
+        }
+
+        /* Buttons Container */
+        .buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding-top: 15px;
+            margin-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .report-btn { 
+            background-color: var(--info); 
+            color: white; 
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            margin: 8px; /* Adjusted margin for better spacing */
+        }
+        .report-btn:hover:not(:disabled) {
+            background-color: #276cda; /* Darker blue on hover */
+            transform: translateY(-2px);
+        }
+        .report-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Icon & Text Spacing (Simplified icon implementation) */
+        .report-btn span:first-child {
+            margin-right: 5px;
+        }
+
+        /* Message Area */
+        #report-message {
+            min-height: 20px;
+            margin-top: 20px;
+            font-weight: 500;
+            color: #ff3860; /* Bulma danger color */
+        }
+
+        /* Responsive Columns (Basic) */
+        .columns.is-multiline { display: flex; flex-wrap: wrap; }
+        .column.is-full { width: 100%; }
+
+        /* Icon Styling (Since Font Awesome is removed, replace the <span class="icon"> with text/emoji) */
+        .report-btn .icon { display: none; } /* Hide the original empty span */
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <button id="back-btn" style="background:none;border:none;color:var(--accent);font-size:1rem;cursor:pointer;margin-bottom:20px;text-decoration:underline;">
+      Back to POS
+    </button>
+        <h3 class="title is-3 has-text-centered">📈 Analytics & Reports</h3>
+        <p class="subtitle is-6 has-text-centered">Select a date range and click a button to download the corresponding **CSV report**.</p>
+
+        <div class="columns is-multiline mt-4">
+            <div class="column is-full">
+                <label class="label">Filter Date Range</label>
+                <div class="field has-addons">
+                    <div class="control">
+                        <input class="input" type="date" id="report-start-date" required>
+                    </div>
+                    <div class="control">
+                        <span class="button is-static">to</span>
+                    </div>
+                    <div class="control">
+                        <input class="input" type="date" id="report-end-date" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="buttons is-centered is-multiline">
+            <button class="button is-info report-btn" data-report-type="sales">
+                <span>💰 Sales Report</span>
+            </button>
+            <button class="button is-info report-btn" data-report-type="items">
+                <span>🍔 Items Report</span>
+            </button>
+            <button class="button is-info report-btn" data-report-type="categories">
+                <span>🏷️ Categories Report</span>
+            </button>
+            <button class="button is-info report-btn" data-report-type="tables">
+                <span>🪑 Tables Report</span>
+            </button>
+        </div>
+        
+        <div id="report-message" class="has-text-centered has-text-danger mt-4"></div>
+    </div>
+
+    <script>
+        // The JavaScript logic remains the same.
+        // --- REPORT LOGIC (Moved from index.html) ---
+
+        // Helper function to create the CSV and trigger download
+        const createAndDownloadCSV = (data, filename) => {
+            if (!data.length) {
+                document.getElementById('report-message').textContent = 'No data found for this period.';
+                return;
+            }
+
+            const headers = Object.keys(data[0]);
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => headers.map(header => {
+                    const value = row[header] === null || row[header] === undefined ? '' : row[header].toString();
+                    return `"${value.replace(/"/g, '""')}"`;
+                }).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                document.getElementById('report-message').textContent = `Report '${filename}' downloaded!`;
+            }
+        };
+
+        const processSalesData = (data) => {
+            return data.map(sale => ({
+                'Order ID': sale.id,
+                'Table ID': sale.desk_id,
+                'Payment Mode': sale.payment_mode,
+                'Total Price': parseFloat(sale.total_price).toFixed(2),
+                'Created At': new Date(sale.created_at).toLocaleString()
+            }));
+        };
+
+        const processTablesData = (data) => {
+            return data.map(sale => ({
+                'Order ID': sale.id,
+                'Table Name': sale.table_name,
+                'Total Price': parseFloat(sale.total_price).toFixed(2),
+                'Created At': new Date(sale.created_at).toLocaleString()
+            }));
+        };
+
+        const processItemsAndCategoriesData = (data, reportType) => {
+            const itemMap = {}; 
+            
+            data.forEach(sale => {
+                try {
+                    const products = JSON.parse(sale.products); 
+                    products.forEach(item => {
+                        const key = reportType === 'items' ? item.name : item.category;
+                        const revenue = (item.price || 0) * (item.qty || 0);
+
+                        if (itemMap[key]) {
+                            itemMap[key].qty += (item.qty || 0);
+                            itemMap[key].total_revenue += revenue;
+                        } else {
+                            itemMap[key] = { 
+                                name: key, 
+                                qty: (item.qty || 0), 
+                                total_revenue: revenue,
+                            };
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error parsing products JSON:', e);
+                }
+            });
+
+            return Object.values(itemMap).map(item => {
+                if (reportType === 'items') {
+                    return {
+                        'Item Name': item.name,
+                        'Total Quantity Sold': item.qty,
+                        'Total Sales Revenue': item.total_revenue.toFixed(2),
+                    };
+                } else { // categories
+                    return {
+                        'Category Name': item.name,
+                        'Total Items Sold': item.qty,
+                        'Total Category Revenue': item.total_revenue.toFixed(2),
+                    };
+                }
+            });
+        };
+
+
+        const generateReport = async (reportType) => {
+            const startDate = document.getElementById('report-start-date').value;
+            const endDate = document.getElementById('report-end-date').value;
+            document.getElementById('report-message').textContent = 'Fetching data...';
+
+            if (!startDate || !endDate) {
+                document.getElementById('report-message').textContent = 'Please select a valid start and end date.';
+                return;
+            }
+
+            try {
+                // Accessing the API exposed via preload.js
+                // NOTE: This will only work in an Electron environment where `window.electronAPI` is defined.
+                // If running in a standard browser, this call will fail.
+                const resp = await window.electronAPI.fetchReportData({ type: reportType, startDate, endDate });
+                
+                if (!resp.success) {
+                    document.getElementById('report-message').textContent = `Error: ${resp.message}`;
+                    return;
+                }
+                
+                if (resp.data.length === 0) {
+                     document.getElementById('report-message').textContent = 'No sales data found for the selected period.';
+                     return;
+                }
+
+                let processedData = [];
+                let filename = `${reportType}_report_${startDate}_to_${endDate}.csv`;
+
+                switch (reportType) {
+                    case 'sales':
+                        processedData = processSalesData(resp.data);
+                        break;
+                    case 'tables':
+                        processedData = processTablesData(resp.data);
+                        break;
+                    case 'items':
+                    case 'categories':
+                        processedData = processItemsAndCategoriesData(resp.data, reportType);
+                        break;
+                }
+
+                document.getElementById('report-message').textContent = '';
+                createAndDownloadCSV(processedData, filename);
+
+            } catch (error) {
+                console.error('Report generation error:', error);
+                // Note: The error message here will likely be about `window.electronAPI` 
+                // being undefined if not run within an Electron app.
+                document.getElementById('report-message').textContent = `System error during report generation: ${error.message}. (Ensure you are running within the Electron environment.)`;
+            }
+        }
+         document.getElementById('back-btn').onclick = () => window.close();
+
+        // Event Listeners for the buttons
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default dates to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('report-start-date').value = today;
+            document.getElementById('report-end-date').value = today;
+
+            document.querySelectorAll('.report-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    button.disabled = true;
+                    generateReport(button.dataset.reportType).finally(() => {
+                        button.disabled = false;
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

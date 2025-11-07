@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Settings • Wild Cafe POS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --accent: #1e40af; --bg: #f8fafc; --card: #ffffff; --danger: #ef4444; --success: #10b981; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); padding: 20px; }
+        :root { 
+            --accent: #1e40af; 
+            --bg: #f8fafc; 
+            --card: #ffffff; 
+            --danger: #ef4444; 
+            --success: #10b981; 
+        }
+        /* Using system font stack for 100% offline guarantee */
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; background-color: var(--bg); padding: 20px; }
         .container { max-width: 800px; margin: auto; background: var(--card); padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h2 { color: var(--accent); border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; }
         .section-header { font-size: 1.1em; font-weight: 700; color: #4b5563; margin-top: 20px; margin-bottom: 10px; border-left: 4px solid var(--accent); padding-left: 10px; }
@@ -24,21 +30,35 @@
         .btn-danger:hover { background-color: #dc2626; }
         .telegram-group { display: flex; gap: 10px; align-items: flex-end; }
         .telegram-group > div { flex-grow: 1; }
-        /* Toast Styling (copied from Table Management file) */
-        #toast{position:fixed;bottom:20px;right:20px;min-width:300px;background:#1f2937;color:#fff;padding:16px;border-radius:8px;
-           box-shadow:0 6px 16px rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;gap:15px;opacity:0;
-           transition:opacity .3s,transform .3s;transform:translateY(20px);border:1px solid #fff3}
-        #toast.show{opacity:1;transform:translateY(0)}
-        #toast.success{background:var(--success);border-color:#fff5}
-        #toast.error{background:var(--danger);border-color:#fff5}
-        #toast i{font-size:1.4em}
+        
+        /* --- TOAST STYLING (Guaranteed Offline) --- */
+        #toast{
+            position:fixed;bottom:20px;right:20px;min-width:300px;
+            background:#1f2937;color:#fff;padding:16px;border-radius:8px;
+            box-shadow:0 6px 16px rgba(0,0,0,.4);z-index:9999;
+            display:flex;align-items:center;gap:15px;
+            opacity:0;transition:opacity .3s,transform .3s;
+            transform:translateY(20px);
+            border:1px solid #fff3;
+        }
+        #toast.show{opacity:1;transform:translateY(0)}
+        #toast.success{background:var(--success);border-color:#fff5}
+        #toast.error{background:var(--danger);border-color:#fff5}
+        
+        /* Uses emoji/text, no external font library dependency */
+        #toast-icon {
+            font-size: 1.4em;
+            line-height: 1;
+        }
         .loading { opacity: 0.6; pointer-events: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>POS System Settings</h2>
-        <a href="../" style="display: block; margin-bottom: 20px; color: var(--accent); text-decoration: none;">&larr; Back to POS</a>
+        <button id="back-btn" style="background:none;border:none;color:var(--accent);font-size:1rem;cursor:pointer;margin-bottom:20px;text-decoration:underline;">
+      Back to POS
+    </button>
         
         <div id="message-container"></div>
         
@@ -87,7 +107,7 @@
             </div>
 
             <div class="section-header">Printer Settings (Use OS Printer ID/Name)</div>
-            <p style="color:#6b7280; margin-bottom: 10px;">Set unique names for your printers. These names are used in <code>window.open</code> as a hint for print routing on a modern web-based POS setup (often requiring local OS configuration for auto-detection).</p>
+            <p style="color:#6b7280; margin-bottom: 10px;">Set unique names for your printers. These names are used in <code>window.open</code> as a hint for print routing.</p>
             <div class="form-group">
                 <label for="shop_printer">Shop/Receipt Printer Name/ID</label>
                 <input type="text" id="shop_printer" name="shop_printer" value="">
@@ -107,7 +127,7 @@
         </form>
     </div>
 
-    <div id="toast"><i id="toast-icon"></i><span id="toast-msg"></span></div>
+    <div id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
 <script>
     const $ = s => document.querySelector(s);
@@ -116,8 +136,10 @@
     const toast = (msg, type = 'error') => {
         const t = $('#toast'), i = $('#toast-icon'), m = $('#toast-msg');
         t.className = type;
-        // Assuming Font Awesome icons are available for demonstration
-        i.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+        
+        // --- OFFLINE FIX: Use Emojis for icons ---
+        i.textContent = type === 'success' ? '✔' : '❌';
+        
         m.textContent = msg;
         t.classList.add('show');
         setTimeout(() => t.classList.remove('show'), 3000);
@@ -131,7 +153,6 @@
             const settings = await window.api.getSettings();
 
             if (!settings || Object.keys(settings).length === 0) {
-                // Initial state/No settings found: use defaults/empty
                 return;
             }
 
@@ -150,13 +171,13 @@
             $('#discount_rate').value = parseFloat(settings.discount_rate || 0.00).toFixed(2);
             $('#discount_enabled').checked = !!settings.discount_enabled;
 
-            // Printers (using new names)
+            // Printers
             $('#shop_printer').value = settings.shop_printer || '';
             $('#kitchen_printer').value = settings.kitchen_printer || '';
 
         } catch (e) {
             console.error('Error loading settings:', e);
-            toast('Failed to load settings. ' + e.message);
+            toast('Failed to load settings. ' + e.message, 'error');
         }
     };
 
@@ -188,15 +209,16 @@
                 // Printers
                 shop_printer: $('#shop_printer').value.trim(),
                 kitchen_printer: $('#kitchen_printer').value.trim(),
-                
-                // Telegram fields removed
             };
 
             await window.api.updateSettings(data);
+            
+            // --- SUCCESS NOTIFICATION ---
             toast('Settings updated successfully!', 'success');
         } catch (e) {
             console.error('Save error:', e);
-            toast('Failed to save settings: ' + e.message);
+            // --- ERROR NOTIFICATION ---
+            toast('Failed to save settings: ' + e.message, 'error');
         } finally {
             btn.classList.remove('loading');
         }
@@ -219,7 +241,7 @@
             toast('Database cleared!', 'success');
         } catch (e) {
             console.error('Clear database error:', e);
-            toast('Clear failed: ' + e.message);
+            toast('Clear failed: ' + e.message, 'error');
         } finally {
             setTimeout(() => btn.classList.remove('loading'), 1000); 
         }
@@ -239,8 +261,10 @@
 
     // Attach click listener for the Clear Database button
     $('#clear-db-btn').addEventListener('click', handleClearDatabase);
-    
-    // Telegram test listener removed
+
+     const closeModal = () => $('#editModal').style.display = 'none';
+     window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
+    $('#back-btn').onclick = () => window.close();
     
     // Load initial data
     loadSettings();

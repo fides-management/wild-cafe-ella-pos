@@ -56,19 +56,77 @@ function createChildWindow(options, filePath) {
         );
     });
 
-    // Close child when main window closes
-    mainWindow.on("closed", () => win.close());
+    // // Close child when main window closes
+    // mainWindow.on("closed", () => win.close());
+
+    // **FIX FOR "OBJECT HAS BEEN DESTROYED"**
+    // 1. Define the handler function
+    const closeChildOnMainWindowClose = () => {
+        if (!win.isDestroyed()) {
+            win.close();
+        }
+    };
+    
+    // 2. Attach the handler to the main window
+    mainWindow.on("closed", closeChildOnMainWindowClose);
+
+    // 3. REMOVE the listener when the child window is closed by the user
+    win.on("closed", () => {
+        // Clean up the main window's listener to prevent memory leaks/errors
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.removeListener("closed", closeChildOnMainWindowClose);
+        }
+    });
 
     return win;
 }
 
 // ================== MAIN WINDOW ==================
+// function createWindow() {
+//     mainWindow = new BrowserWindow({
+//         width: 1200,
+//         height: 800,
+//         autoHideMenuBar: false,
+//         frame: true,
+//         webPreferences: {
+//             preload: path.join(__dirname, "preload.js"),
+//             contextIsolation: true,
+//             nodeIntegration: false,
+//         },
+//     });
+
+//     // Start with the login screen
+//     mainWindow.loadFile(path.join(__dirname, "views", "login.html"));
+// }
+
+// function DashboradWindow() {
+//     mainWindow = new BrowserWindow({
+//         width: 1200,
+//         height: 800,
+//         autoHideMenuBar: false,
+//         frame: true,
+//         webPreferences: {
+//             preload: path.join(__dirname, "preload.js"),
+//             contextIsolation: true,
+//             nodeIntegration: false,
+//         },
+//     });
+
+//     // Start with the login screen
+//     mainWindow.loadFile(path.join(__dirname, "views", "index.html"));
+// }
+
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        autoHideMenuBar: false,
-        frame: true,
+        width: 480,
+        height: 605,
+        title: "Login– Wild Cafe Ella POS",
+        icon: path.join(__dirname, 'build', 'icon.png'),
+        minimizable: false,
+        maximizable: false,
+        resizable: false,
+        autoHideMenuBar: true,
+        frame: false,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             contextIsolation: true,
@@ -78,8 +136,49 @@ function createWindow() {
 
     // Start with the login screen
     mainWindow.loadFile(path.join(__dirname, "views", "login.html"));
+    
+    // NOTE: If you are calling createWindow() somewhere, rename that call to createLoginWindow()
 }
 
+/**
+ * Closes the current window and opens the main POS window (index.html).
+ * This function is called via IPC after a successful login.
+ */
+function openMainWindow() {
+    // 1. Get a reference to the current (login) window
+    const loginWindow = mainWindow; 
+    
+    // 2. Create the new main window instance
+    mainWindow = new BrowserWindow({
+        width: 1200,
+        height: 800,
+        autoHideMenuBar: true,
+          title: "Dashboard– Wild Cafe Ella POS",
+        icon: path.join(__dirname, 'build', 'icon.png'),
+        frame: true,
+        webPreferences: {
+            preload: path.join(__dirname, "preload.js"),
+            contextIsolation: true,
+            nodeIntegration: false,
+        },
+    });
+
+    // 3. Load the main application page
+    mainWindow.loadFile(path.join(__dirname, "index.html")); 
+
+    // 4. Close the old (login) window
+    if (loginWindow && !loginWindow.isDestroyed()) {
+        loginWindow.close();
+    }
+}
+
+// ---------------------------------------------------------
+// IPC Handler (Add this where you register other IPC handlers)
+// ---------------------------------------------------------
+ipcMain.handle('login-success-navigate', (event) => {
+    openMainWindow();
+    return true; // Return a success signal
+});
 // ================== IPC HANDLERS (Navigation) ==================
 
 // ---- Menu Items ----
@@ -100,6 +199,22 @@ ipcMain.handle("open-items-page", () => {
     );
 });
 
+ipcMain.handle("open-reports-page", () => {
+    createChildWindow(
+        {
+            width: 800,
+            height: 700,
+            title: "Menu Items – Wild Cafe Ella POS",
+            minimizable: false,
+            maximizable: false,
+            resizable: false,
+            autoHideMenuBar: true,
+            frame: false,
+            modal: false
+        },
+        path.join(__dirname, "views", "reports.html")
+    );
+});
 // ---- Past Orders ----
 ipcMain.handle("open-orders-page", () => {
     createChildWindow(
@@ -121,8 +236,8 @@ ipcMain.handle("open-orders-page", () => {
 ipcMain.handle("open-categories-page", () => {
     createChildWindow(
         {
-            width: 600,
-            height: 500,
+            width: 800,
+            height: 700,
             title: "Categories – Wild Cafe POS",
              minimizable: false,
             maximizable: false,
@@ -138,8 +253,8 @@ ipcMain.handle("open-categories-page", () => {
 ipcMain.handle("open-tables-page", () => {
     createChildWindow(
         {
-            width: 600,
-            height: 500,
+            width: 800,
+            height: 700,
             title: "Tables – Wild Cafe POS",
              minimizable: false,
             maximizable: false,
@@ -155,15 +270,15 @@ ipcMain.handle("open-tables-page", () => {
 ipcMain.handle("open-settings-page", () => {
     createChildWindow(
         {
-            width: 600,
-            height: 500,
+            width: 800,
+            height: 700,
             title: "Settings – Wild Cafe POS",
-            //  minimizable: false,
-            // maximizable: false,
-            // resizable: false,
-            // autoHideMenuBar: false,
-            // frame: false,
-            // modal: false
+            minimizable: false,
+            maximizable: false,
+            resizable: false,
+            autoHideMenuBar: true,
+            frame: false,
+            modal: false
         },
         path.join(__dirname, "views", "settings.html")
     );
@@ -174,6 +289,18 @@ ipcMain.on("open-settings", () => {
     // You can replace this with a real window later
     console.log("Settings requested – implement in a new view if needed");
 });
+
+// main.js - Add this handler below your other IPC handlers
+
+ipcMain.on("logout-and-close", () => {
+    console.log("Logout requested. Closing main window.");
+    // Safely close the main window. This triggers the 'window-all-closed' app exit.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.close();
+    }
+});
+
+// Note: Ensure your main.js still has the global mainWindow variable defined.
 
 // ================== APP LIFECYCLE ==================
 app.whenReady().then(async () => {
