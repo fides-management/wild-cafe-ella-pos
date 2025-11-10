@@ -143,7 +143,7 @@
         <button id="back-btn" style="background:none;border:none;color:var(--accent);font-size:1rem;cursor:pointer;margin-bottom:20px;text-decoration:underline;">
       Back to POS
     </button>
-        <h3 class="title is-3 has-text-centered">📈 Analytics & Reports</h3>
+        <h3 class="title is-3 has-text-centered">Analytics & Reports</h3>
         <p class="subtitle is-6 has-text-centered">Select a date range and click a button to download the corresponding **CSV report**.</p>
 
         <div class="columns is-multiline mt-4">
@@ -165,189 +165,153 @@
 
         <div class="buttons is-centered is-multiline">
             <button class="button is-info report-btn" data-report-type="sales">
-                <span>💰 Sales Report</span>
+                <span>Sales Report</span>
             </button>
             <button class="button is-info report-btn" data-report-type="items">
-                <span>🍔 Items Report</span>
+                <span>Items Report</span>
             </button>
-            <button class="button is-info report-btn" data-report-type="categories">
-                <span>🏷️ Categories Report</span>
+            <!-- <button class="button is-info report-btn" data-report-type="categories">
+                <span>捷ｸCategories Report</span>
             </button>
             <button class="button is-info report-btn" data-report-type="tables">
-                <span>🪑 Tables Report</span>
-            </button>
+                <span>ｪTables Report</span>
+            </button> -->
         </div>
         
         <div id="report-message" class="has-text-centered has-text-danger mt-4"></div>
     </div>
 
     <script>
-        // The JavaScript logic remains the same.
-        // --- REPORT LOGIC (Moved from index.html) ---
+        // --- UPDATED REPORT LOGIC ---
 
-        // Helper function to create the CSV and trigger download
-        const createAndDownloadCSV = (data, filename) => {
-            if (!data.length) {
-                document.getElementById('report-message').textContent = 'No data found for this period.';
-                return;
-            }
+        // Helper function to create the CSV and trigger download (Unchanged)
+        const createAndDownloadCSV = (data, filename) => {
+            if (!data.length) {
+                document.getElementById('report-message').textContent = 'No data found for this period.';
+                return;
+            }
 
-            const headers = Object.keys(data[0]);
-            const csvContent = [
-                headers.join(','),
-                ...data.map(row => headers.map(header => {
-                    const value = row[header] === null || row[header] === undefined ? '' : row[header].toString();
-                    return `"${value.replace(/"/g, '""')}"`;
-                }).join(','))
-            ].join('\n');
+            const headers = Object.keys(data[0]);
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => headers.map(header => {
+                    const value = row[header] === null || row[header] === undefined ? '' : row[header].toString();
+                    return `"${value.replace(/"/g, '""')}"`;
+                }).join(','))
+            ].join('\n');
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', filename);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                document.getElementById('report-message').textContent = `Report '${filename}' downloaded!`;
-            }
-        };
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                document.getElementById('report-message').textContent = `Report '${filename}' downloaded!`;
+            }
+        };
 
-        const processSalesData = (data) => {
-            return data.map(sale => ({
-                'Order ID': sale.id,
-                'Table ID': sale.desk_id,
-                'Payment Mode': sale.payment_mode,
-                'Total Price': parseFloat(sale.total_price).toFixed(2),
-                'Created At': new Date(sale.created_at).toLocaleString()
-            }));
-        };
+        // FIX: Updated to use the confirmed sales table columns.
+        const processSalesData = (data) => {
+            return data.map(sale => ({
+                // Use 'id' from the sales table
+                'Order ID': sale.id,
+                // Use 'desk_id' (assuming this is used for Table)
+                'Table ID': sale.desk_id, 
+                // Use 'payment_mode'
+                'Payment Mode': sale.payment_mode,
+                // Use 'price' for the total price
+                'Total Price': parseFloat(sale.price).toFixed(2), 
+                // Use 'timestamp'
+                'Created At': new Date(sale.timestamp).toLocaleString() 
+            }));
+        };
 
-        const processTablesData = (data) => {
-            return data.map(sale => ({
-                'Order ID': sale.id,
-                'Table Name': sale.table_name,
-                'Total Price': parseFloat(sale.total_price).toFixed(2),
-                'Created At': new Date(sale.created_at).toLocaleString()
-            }));
-        };
+        // Updated function to process 'items' report based on confirmed column names
+        const processItemsData = (data) => {
+            return data.map(item => ({
+                'Product ID': item.id,
+                'Name': item.name,
+                'Product': item.Product,
+                'Category': item.category,
+                'Price': parseFloat(item.price || 0).toFixed(2),
+                'Code': item.code
+            }));
+        };
 
-        const processItemsAndCategoriesData = (data, reportType) => {
-            const itemMap = {}; 
-            
-            data.forEach(sale => {
-                try {
-                    const products = JSON.parse(sale.products); 
-                    products.forEach(item => {
-                        const key = reportType === 'items' ? item.name : item.category;
-                        const revenue = (item.price || 0) * (item.qty || 0);
+        // Updated to handle new backend logic
+        const generateReport = async (reportType) => {
+            const startDate = document.getElementById('report-start-date').value;
+            const endDate = document.getElementById('report-end-date').value;
+            document.getElementById('report-message').textContent = 'Fetching data...';
 
-                        if (itemMap[key]) {
-                            itemMap[key].qty += (item.qty || 0);
-                            itemMap[key].total_revenue += revenue;
-                        } else {
-                            itemMap[key] = { 
-                                name: key, 
-                                qty: (item.qty || 0), 
-                                total_revenue: revenue,
-                            };
-                        }
-                    });
-                } catch (e) {
-                    console.error('Error parsing products JSON:', e);
-                }
-            });
+            if (!startDate || !endDate) {
+                document.getElementById('report-message').textContent = 'Please select a valid start and end date.';
+                return;
+            }
 
-            return Object.values(itemMap).map(item => {
-                if (reportType === 'items') {
-                    return {
-                        'Item Name': item.name,
-                        'Total Quantity Sold': item.qty,
-                        'Total Sales Revenue': item.total_revenue.toFixed(2),
-                    };
-                } else { // categories
-                    return {
-                        'Category Name': item.name,
-                        'Total Items Sold': item.qty,
-                        'Total Category Revenue': item.total_revenue.toFixed(2),
-                    };
-                }
-            });
-        };
+            try {
+                // Accessing the API exposed via preload.js
+                const resp = await window.electronAPI.fetchReportData({ type: reportType, startDate, endDate });
+                
+                if (!resp.success) {
+                    document.getElementById('report-message').textContent = `Error: ${resp.message}`;
+                    return;
+                }
+                
+                if (resp.data.length === 0) {
+                     document.getElementById('report-message').textContent = 'No data found for the selected period.';
+                     return;
+                }
 
+                let processedData = [];
+                let filename = `${reportType}_report_${startDate}_to_${endDate}.csv`;
 
-        const generateReport = async (reportType) => {
-            const startDate = document.getElementById('report-start-date').value;
-            const endDate = document.getElementById('report-end-date').value;
-            document.getElementById('report-message').textContent = 'Fetching data...';
+                // Updated switch to only handle valid report types 
+                switch (reportType) {
+                    case 'sales':
+                        processedData = processSalesData(resp.data);
+                        break;
+                    case 'items':
+                        processedData = processItemsData(resp.data);
+                        break;
+                    case 'categories':
+                    case 'tables':
+                        // If the backend is set up to return a structured report for these types, 
+                        // we can assume the data is ready for CSV generation.
+                        processedData = resp.data;
+                        break;
+                }
 
-            if (!startDate || !endDate) {
-                document.getElementById('report-message').textContent = 'Please select a valid start and end date.';
-                return;
-            }
+                document.getElementById('report-message').textContent = '';
+                createAndDownloadCSV(processedData, filename);
 
-            try {
-                // Accessing the API exposed via preload.js
-                // NOTE: This will only work in an Electron environment where `window.electronAPI` is defined.
-                // If running in a standard browser, this call will fail.
-                const resp = await window.electronAPI.fetchReportData({ type: reportType, startDate, endDate });
-                
-                if (!resp.success) {
-                    document.getElementById('report-message').textContent = `Error: ${resp.message}`;
-                    return;
-                }
-                
-                if (resp.data.length === 0) {
-                     document.getElementById('report-message').textContent = 'No sales data found for the selected period.';
-                     return;
-                }
+            } catch (error) {
+                console.error('Report generation error:', error);
+                document.getElementById('report-message').textContent = `System error during report generation: ${error.message}. (Ensure you are running within the Electron environment.)`;
+            }
+        }
+         document.getElementById('back-btn').onclick = () => window.close();
 
-                let processedData = [];
-                let filename = `${reportType}_report_${startDate}_to_${endDate}.csv`;
+        // Event Listeners for the buttons (Unchanged)
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default dates to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('report-start-date').value = today;
+            document.getElementById('report-end-date').value = today;
 
-                switch (reportType) {
-                    case 'sales':
-                        processedData = processSalesData(resp.data);
-                        break;
-                    case 'tables':
-                        processedData = processTablesData(resp.data);
-                        break;
-                    case 'items':
-                    case 'categories':
-                        processedData = processItemsAndCategoriesData(resp.data, reportType);
-                        break;
-                }
-
-                document.getElementById('report-message').textContent = '';
-                createAndDownloadCSV(processedData, filename);
-
-            } catch (error) {
-                console.error('Report generation error:', error);
-                // Note: The error message here will likely be about `window.electronAPI` 
-                // being undefined if not run within an Electron app.
-                document.getElementById('report-message').textContent = `System error during report generation: ${error.message}. (Ensure you are running within the Electron environment.)`;
-            }
-        }
-         document.getElementById('back-btn').onclick = () => window.close();
-
-        // Event Listeners for the buttons
-        document.addEventListener('DOMContentLoaded', () => {
-            // Set default dates to today
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('report-start-date').value = today;
-            document.getElementById('report-end-date').value = today;
-
-            document.querySelectorAll('.report-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    button.disabled = true;
-                    generateReport(button.dataset.reportType).finally(() => {
-                        button.disabled = false;
-                    });
-                });
-            });
-        });
-    </script>
+            document.querySelectorAll('.report-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    button.disabled = true;
+                    generateReport(button.dataset.reportType).finally(() => {
+                        button.disabled = false;
+                    });
+                });
+            });
+        });
+    </script>
 </body>
 </html>

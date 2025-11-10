@@ -35,7 +35,7 @@ function registerHandlers(db, ipcMain, mainWindow, broadcastToAll) {
             case 'sales':
                 query = `
                     SELECT 
-                        id, desk_id, payment_mode, price AS total_price, timestamp, active
+                        id, products, desk_id, payment_mode, price AS total_price, timestamp, active
                     FROM sales
                     WHERE timestamp >= ? AND timestamp < ?
                     ORDER BY timestamp DESC
@@ -47,31 +47,8 @@ function registerHandlers(db, ipcMain, mainWindow, broadcastToAll) {
                 // This query fetches the full sales records which can be processed on the front-end/Electron side.
                 query = `
                     SELECT 
-                        id, products, timestamp
-                    FROM sales
-                    WHERE timestamp >= ? AND timestamp < ? AND active = 'paid'
-                    ORDER BY timestamp DESC
-                `;
-                params = [startDate, adjustedEndDate];
-                break;
-            case 'tables':
-                query = `
-                    SELECT 
-                        s.id, d.name AS table_name, s.price AS total_price, s.timestamp
-                    FROM sales s
-                    JOIN desk d ON s.desk_id = d.id
-                    WHERE s.timestamp >= ? AND s.timestamp < ? AND s.active = 'paid'
-                    ORDER BY s.timestamp DESC
-                `;
-                params = [startDate, adjustedEndDate];
-                break;
-            case 'categories':
-                // Similar to items, fetch full sales and process JSON for categories.
-                query = `
-                    SELECT 
-                        products
-                    FROM sales
-                    WHERE timestamp >= ? AND timestamp < ? AND active = 'paid'
+                        id, name, category, price, image, code
+                    FROM products
                 `;
                 params = [startDate, adjustedEndDate];
                 break;
@@ -138,62 +115,179 @@ function registerHandlers(db, ipcMain, mainWindow, broadcastToAll) {
     }
 
     // --- Shop/Customer Receipt (Detailed) ---
+    // if (isShop) {
+    //     let content = `
+    //         <html><head><style>
+    //             body { font-family: monospace; font-size: 11px; width: 80mm; margin: 0; padding: 0; }
+    //             h1 { font-size: 1.2em; text-align: center; margin: 5px 0; }
+    //             .header-info { text-align: center; margin-bottom: 10px; }
+    //             .header-info p { margin: 2px 0; }
+    //             .line { border-top: 1px dashed #000; margin: 10px 0; }
+    //             table { width: 100%; border-collapse: collapse; }
+    //             th, td { text-align: left; padding: 2px 0; }
+    //             .item-qty { width: 10%; }
+    //             .item-name { width: 60%; }
+    //             .item-price { text-align: right; width: 30%; }
+    //             .summary { text-align: right; margin-top: 10px; }
+    //             .summary div { display: flex; justify-content: space-between; margin: 3px 0; }
+    //             .total-line { font-weight: bold; font-size: 1.1em; border-top: 1px solid #000; padding-top: 5px; }
+    //         </style></head><body>
+    //             <h1>${settings.name || 'WILD CAFE ELLA POS'}</h1>
+    //             <div class="header-info">
+    //                 <p>${settings.address || 'Address not set'}</p>
+    //                 <p>Tel: ${settings.phone_number || 'N/A'} | Email: ${settings.email || 'N/A'}</p>
+    //             </div>
+    //             <div class="line"></div>
+    //             <p><strong>Table:</strong> ${order.desk_name || order.table_name || 'N/A'}</p>
+    //             <p><strong>Order ID:</strong> #${order.orderId || order.id || 'N/A'}</p>
+    //             <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+    //             <div class="line"></div>
+
+    //             <table>
+    //                 <thead>
+    //                     <tr>
+    //                         <th class="item-qty">Qty</th>
+    //                         <th class="item-name">Item</th>
+    //                         <th class="item-price">Total</th>
+    //                     </tr>
+    //                 </thead>
+    //                 <tbody>
+    //     `;
+
+    //     (order.items || []).forEach(item => {
+    //         const price = Number(item.price) || 0;
+    //         const qty = Number(item.qty) || 0;
+    //         const itemTotal = safeFixed(price * qty);
+    //         content += `
+    //             <tr>
+    //                 <td class="item-qty">${qty}</td>
+    //                 <td class="item-name">${item.name || ''}</td>
+    //                 <td class="item-price">${currencySymbol}${itemTotal}</td>
+    //             </tr>
+    //         `;
+    //     });
+
+    //     // --- Safe summary calculations ---
+    //     const subtotal = (order.items || []).reduce((sum, i) => sum + ((i.price || 0) * (i.qty || 0)), 0);
+    //     const discountRate = parseFloat(order.discount) || 0;
+    //     const discountAmount = subtotal * (discountRate / 100);
+    //     const taxableBase = subtotal - discountAmount;
+    //     const taxAmount = settings.tax_enabled ? taxableBase * ((settings.tax_rate || 0) / 100) : 0;
+    //     const total = taxableBase + taxAmount;
+
+    //     content += `
+    //                 </tbody>
+    //             </table>
+    //             <div class="line"></div>
+    //             <div class="summary">
+    //                 <div><span>Subtotal:</span><span>${currencySymbol}${safeFixed(subtotal)}</span></div>
+    //     `;
+
+    //     if (settings.discount_enabled && discountRate > 0) {
+    //         content += `
+    //                 <div><span>Discount (${discountRate}%):</span><span>-${currencySymbol}${safeFixed(discountAmount)}</span></div>
+    //         `;
+    //     }
+
+    //     if (settings.tax_enabled) {
+    //         content += `
+    //                 <div><span>Tax (${settings.tax_rate}%):</span><span>+${currencySymbol}${safeFixed(taxAmount)}</span></div>
+    //         `;
+    //     }
+
+    //     content += `
+    //                 <div class="total-line"><span>TOTAL:</span><span>${currencySymbol}${safeFixed(total)}</span></div>
+    //                 <div><span>Paid By:</span><span>${order.paymentMethod || 'N/A'}</span></div>
+    //                 <div><span>Amount Paid:</span><span>${currencySymbol}${safeFixed(order.amountPaid)}</span></div>
+    //                 <div><span>Change:</span><span>${currencySymbol}${safeFixed(order.change)}</span></div>
+    //             </div>
+
+    //             <div class="line"></div>
+    //             <p style="text-align:center; font-size: 10px;">*** THANK YOU - VISIT AGAIN ***</p>
+    //         </body></html>
+    //     `;
+
+    //     return content;
+    // }
+
     if (isShop) {
+        // --- HTML structure for the Shop Receipt (Thermal Printer) ---
         let content = `
-            <html><head><style>
-                body { font-family: monospace; font-size: 11px; width: 80mm; margin: 0; padding: 0; }
-                h1 { font-size: 1.2em; text-align: center; margin: 5px 0; }
-                .header-info { text-align: center; margin-bottom: 10px; }
-                .header-info p { margin: 2px 0; }
-                .line { border-top: 1px dashed #000; margin: 10px 0; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { text-align: left; padding: 2px 0; }
-                .item-qty { width: 10%; }
-                .item-name { width: 60%; }
-                .item-price { text-align: right; width: 30%; }
-                .summary { text-align: right; margin-top: 10px; }
-                .summary div { display: flex; justify-content: space-between; margin: 3px 0; }
-                .total-line { font-weight: bold; font-size: 1.1em; border-top: 1px solid #000; padding-top: 5px; }
-            </style></head><body>
-                <h1>${settings.name || 'WILD CAFE ELLA POS'}</h1>
-                <div class="header-info">
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: monospace;
+                        font-size: 11px;
+                        line-height: 1.3;
+                        width: 280px; /* Standard thermal width */
+                        padding: 0;
+                        margin: 0;
+                        color: #000;
+                    }
+                    .center { text-align: center; margin-bottom: 5px; }
+                    .header h1 { font-size: 16px; margin: 0; }
+                    .header p { margin: 1px 0; }
+                    .line { border-top: 1px dashed #000; margin: 5px 0; }
+                    table { width: 100%; border-collapse: collapse; }
+                    .items td { padding: 3px 0; }
+                    .qty { text-align: left; width: 15%; }
+                    .name { width: 60%; }
+                    .price { text-align: right; width: 25%; }
+                    .summary div { display: flex; justify-content: space-between; margin: 3px 0; }
+                    .total-line { font-size: 12px; font-weight: bold; }
+                    .footer { margin-top: 10px; text-align: center; }
+                </style>
+            </head>
+            <body>
+                <div class="header center">
+                    <h1>${settings.name || 'WILD CAFE ELLA POS'}</h1>
                     <p>${settings.address || 'Address not set'}</p>
-                    <p>Tel: ${settings.phone_number || 'N/A'} | Email: ${settings.email || 'N/A'}</p>
+                    <p>Phone: ${settings.phone_number || 'N/A'}</p>
+                    <p>Email: ${settings.email || 'N/A'}</p>
                 </div>
                 <div class="line"></div>
-                <p><strong>Table:</strong> ${order.desk_name || order.table_name || 'N/A'}</p>
-                <p><strong>Order ID:</strong> #${order.orderId || order.id || 'N/A'}</p>
-                <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+                <div style="margin-bottom: 5px;">
+                    <p><strong>Order ID:</strong> #${order.id || 'N/A'}</p>
+                    <p><strong>Table:</strong> ${order.desk_name || 'N/A'}</p>
+                    <p><strong>Date/Time:</strong> ${order.time_stamp || new Date().toLocaleString()}</p>
+                </div>
                 <div class="line"></div>
-
                 <table>
                     <thead>
                         <tr>
-                            <th class="item-qty">Qty</th>
-                            <th class="item-name">Item</th>
-                            <th class="item-price">Total</th>
+                            <td class="qty">QTY</td>
+                            <td class="name">ITEM</td>
+                            <td class="price">PRICE</td>
                         </tr>
                     </thead>
                     <tbody>
         `;
 
+        // ------------------ ITEMS LOOP ------------------
         (order.items || []).forEach(item => {
             const price = Number(item.price) || 0;
             const qty = Number(item.qty) || 0;
-            const itemTotal = safeFixed(price * qty);
+            // The item total should be calculated from the original price * qty
+            const itemTotal = safeFixed(price * qty); 
             content += `
                 <tr>
-                    <td class="item-qty">${qty}</td>
-                    <td class="item-name">${item.name || ''}</td>
-                    <td class="item-price">${currencySymbol}${itemTotal}</td>
+                    <td class="qty">${qty}x</td>
+                    <td class="name">${item.name || ''}</td>
+                    <td class="price">${currencySymbol}${itemTotal}</td>
                 </tr>
             `;
         });
+        // ------------------------------------------------
 
-        // --- Safe summary calculations ---
+        // --- Calculations (using order.items) ---
         const subtotal = (order.items || []).reduce((sum, i) => sum + ((i.price || 0) * (i.qty || 0)), 0);
-        const discountRate = parseFloat(order.discount) || 0;
+        
+        // Use the discount rate passed in tempReceiptOrder (order.discount_rate)
+        const discountRate = parseFloat(order.discount_rate) || 0;
         const discountAmount = subtotal * (discountRate / 100);
+
         const taxableBase = subtotal - discountAmount;
         const taxAmount = settings.tax_enabled ? taxableBase * ((settings.tax_rate || 0) / 100) : 0;
         const total = taxableBase + taxAmount;
@@ -206,28 +300,32 @@ function registerHandlers(db, ipcMain, mainWindow, broadcastToAll) {
                     <div><span>Subtotal:</span><span>${currencySymbol}${safeFixed(subtotal)}</span></div>
         `;
 
-        if (settings.discount_enabled && discountRate > 0) {
+        if (settings.discount_enabled && discountAmount > 0) {
+            // Use discount_rate for display
             content += `
-                    <div><span>Discount (${discountRate}%):</span><span>-${currencySymbol}${safeFixed(discountAmount)}</span></div>
+                    <div><span>Discount (${safeFixed(discountRate)}%):</span><span>-${currencySymbol}${safeFixed(discountAmount)}</span></div>
             `;
         }
 
         if (settings.tax_enabled) {
+            // Use tax_rate for display
             content += `
-                    <div><span>Tax (${settings.tax_rate}%):</span><span>+${currencySymbol}${safeFixed(taxAmount)}</span></div>
+                    <div><span>Tax (${safeFixed(settings.tax_rate || 0)}%):</span><span>+${currencySymbol}${safeFixed(taxAmount)}</span></div>
             `;
         }
 
         content += `
                     <div class="total-line"><span>TOTAL:</span><span>${currencySymbol}${safeFixed(total)}</span></div>
                     <div><span>Paid By:</span><span>${order.paymentMethod || 'N/A'}</span></div>
-                    <div><span>Amount Paid:</span><span>${currencySymbol}${safeFixed(order.amountPaid)}</span></div>
+                    <div><span>Amount Paid:</span><span>${currencySymbol}${safeFixed(order.amount_paid)}</span></div>
                     <div><span>Change:</span><span>${currencySymbol}${safeFixed(order.change)}</span></div>
                 </div>
-
                 <div class="line"></div>
-                <p style="text-align:center; font-size: 10px;">*** THANK YOU - VISIT AGAIN ***</p>
-            </body></html>
+                <div class="footer">
+                    <p>Thank you for dining with us!</p>
+                </div>
+            </body>
+            </html>
         `;
 
         return content;
@@ -643,16 +741,134 @@ async function printReceipt(mainWindow, printerName, htmlContent) {
         }
     });
 
-    ipcMain.handle("db:updateOrderToPaid", async (event, paymentData) => {
-        // NOTE: paymentData MUST include order_id, payment_mode, amount_paid, and change_amount
-        const { order_id, payment_mode, amount_paid, change_amount } = paymentData;
-        const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+//     ipcMain.handle("db:updateOrderToPaid", async (event, paymentData) => {
+//         // NOTE: paymentData MUST include order_id, payment_mode, amount_paid, and change_amount
+//         const { order_id, payment_mode, amount_paid, change_amount } = paymentData;
+//         const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+//         try {
+//             // 1. Fetch current order details before updating
+//             const [orderRows] = await db.query(
+//                 `
+//                 SELECT s.*, d.name AS desk_name 
+//                 FROM sales s 
+//                 LEFT JOIN desk d ON s.desk_id = d.id 
+//                 WHERE s.id = ?
+//                 `,
+//                 [order_id]
+//             );
+
+//             if (orderRows.length === 0) {
+//                 throw new Error("Order not found.");
+//             }
+
+//             const order = orderRows[0];
+            
+//             let products = order.products;
+// if (typeof products === 'string') {
+//   try {
+//     products = JSON.parse(products);
+//   } catch (err) {
+//     console.error("Failed to parse products JSON:", err);
+//   }
+// }
+
+        
+            
+//             // 2. Fetch settings for receipt and printers
+//             const [settingsRows] = await db.query(
+//                 `
+//                 SELECT name, address, phone_number, email, currency_symbol, shop_printer, kitchen_printer, tax_enabled, tax_rate, discount_enabled, discount_rate
+//                 FROM settings 
+//                 WHERE id = 1
+//                 `
+//             );
+
+//             const ss = settingsRows[0];
+//             // You must ensure that your `sales` table has a `discount_rate` column or similar if you intend to use it.
+//             const discountRate = parseFloat(ss.discount_rate) || 0; 
+
+//             const settings = settingsRows.length > 0 ? settingsRows[0] : {};
+//             const currencySymbol = settings.currency_symbol || "Rs";
+
+//             // 3. Prepare data structure for receipt generation
+//             const tempReceiptOrder = {
+//                 orderId: order_id,
+//                 desk_name: order.desk_name || `Desk ID ${order.desk_id || 'Unknown'}`,
+//                 items: products,
+//                 notes: order.notes || '', 
+//                 paymentMethod: payment_mode,
+//                 amount_paid: parseFloat(amount_paid),
+//                 change: parseFloat(change_amount),
+//                 discount: discountRate, 
+//             }
+
+//             // 4. Generate Receipt Content
+//             const shopReceiptHTML = generateReceiptContent('shop', tempReceiptOrder, settings, currencySymbol);
+//            // const kitchenReceiptHTML = generateReceiptContent('kitchen', tempReceiptOrder, settings, currencySymbol);
+            
+//             // 5. Update the sales record to 'paid' 
+//             // FIX: Add AND active = 'pending' to prevent updating an already paid order (resolves original error).
+//             const [updateResult] = await db.query(
+//                 `
+//                 UPDATE sales SET 
+//                     active = 'paid', 
+//                     payment_mode = ?, 
+//                     price = ?, 
+//                     timestamp = ?
+//                 WHERE id = ? AND active = 'pending'
+//                 `,
+//                 [payment_mode, amount_paid, timestamp, order_id]
+//             );
+
+//             if (updateResult.affectedRows === 0) {
+//                 // Throws the original error if the order was already paid or ID is wrong
+//                 throw new Error('Order not found or was already paid.');
+//             }
+
+//             // 6. Print Receipts (Only run AFTER successful DB update)
+//             const shopPrintResult = await printReceipt(mainWindow, settings.shop_printer, shopReceiptHTML);
+//           //  const kitchenPrintResult = await printReceipt(mainWindow, settings.kitchen_printer, kitchenReceiptHTML);
+            
+//             // 7. Broadcast update
+//             broadcastToAll("orders-updated");
+            
+//             return { 
+//                 success: true, 
+//                 message: "Payment confirmed and order marked as paid.",
+//                 print_status: {
+//                     shop: shopPrintResult.message,
+//                 }
+//             };
+//         } catch (error) {
+//             console.error("Error confirming payment and printing:", error);
+//             // Re-throw the error with a simplified message for the front end
+//             throw new Error(`Failed to confirm payment: ${error.message}`);
+//         }
+//     });
+
+ipcMain.handle("db:updateOrderToPaid", async (event, paymentData) => {
+        // Read the new data from the frontend
+        const { order_id, payment_mode, amount_paid, change_amount, total_due, discount_amount } = paymentData;
+        // Use the correct column name 'timestamp'
+        const time_stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
         try {
-            // 1. Fetch current order details before updating
+            // 1. Fetch current order details
+            // NOTE: The SQL is updated to use 'time_stamp' as the alias for s.timestamp
+            // and to select all required columns.
+
             const [orderRows] = await db.query(
                 `
-                SELECT s.*, d.name AS desk_name 
+                SELECT 
+                    s.id, 
+                    s.products, 
+                    s.price, 
+                    s.payment_mode, 
+                    s.desk_id, 
+                    s.active,
+                    s.timestamp AS time_stamp, 
+                    d.name AS desk_name 
                 FROM sales s 
                 LEFT JOIN desk d ON s.desk_id = d.id 
                 WHERE s.id = ?
@@ -666,18 +882,17 @@ async function printReceipt(mainWindow, printerName, htmlContent) {
 
             const order = orderRows[0];
             
-            let products = order.products;
-if (typeof products === 'string') {
-  try {
-    products = JSON.parse(products);
-  } catch (err) {
-    console.error("Failed to parse products JSON:", err);
-  }
-}
+            let products = order.products; 
+            if (typeof products === 'string') {
+              try {
+                // Ensure 'products' is parsed into an array/object
+                products = JSON.parse(products);
+              } catch (err) {
+                console.error("Failed to parse products JSON:", err);
+              }
+            }
 
-        
-            
-            // 2. Fetch settings for receipt and printers
+            // 2. Fetch settings (updated to fetch all requested columns)
             const [settingsRows] = await db.query(
                 `
                 SELECT name, address, phone_number, email, currency_symbol, shop_printer, kitchen_printer, tax_enabled, tax_rate, discount_enabled, discount_rate
@@ -686,31 +901,31 @@ if (typeof products === 'string') {
                 `
             );
 
-            const ss = settingsRows[0];
-            // You must ensure that your `sales` table has a `discount_rate` column or similar if you intend to use it.
-            const discountRate = parseFloat(ss.discount_rate) || 0; 
-
             const settings = settingsRows.length > 0 ? settingsRows[0] : {};
-            const currencySymbol = settings.currency_symbol || "Rs";
+            const currencySymbol = settings.currency_symbol || "Rs";
 
-            // 3. Prepare data structure for receipt generation
+            // 3. Prepare data for receipt
             const tempReceiptOrder = {
-                orderId: order_id,
+                // Use order.id for the receipt ID
+                id: order.id, 
                 desk_name: order.desk_name || `Desk ID ${order.desk_id || 'Unknown'}`,
-                items: products,
+                items: products, 
                 notes: order.notes || '', 
                 paymentMethod: payment_mode,
                 amount_paid: parseFloat(amount_paid),
                 change: parseFloat(change_amount),
-                discount: discountRate, 
+                address: settings.address,
+                email: settings.email,
+                businessName: settings.name,
+                // Use the discount rate passed from the frontend for calculation 
+                discount_rate: parseFloat(discount_amount) || 0, 
+                time_stamp: order.time_stamp // Use the fetched timestamp
             }
 
             // 4. Generate Receipt Content
             const shopReceiptHTML = generateReceiptContent('shop', tempReceiptOrder, settings, currencySymbol);
-           // const kitchenReceiptHTML = generateReceiptContent('kitchen', tempReceiptOrder, settings, currencySymbol);
             
             // 5. Update the sales record to 'paid' 
-            // FIX: Add AND active = 'pending' to prevent updating an already paid order (resolves original error).
             const [updateResult] = await db.query(
                 `
                 UPDATE sales SET 
@@ -720,17 +935,16 @@ if (typeof products === 'string') {
                     timestamp = ?
                 WHERE id = ? AND active = 'pending'
                 `,
-                [payment_mode, amount_paid, timestamp, order_id]
+                // Use the correct column name 'time_stamp' in the values array
+                [payment_mode, total_due, time_stamp, order_id] 
             );
 
             if (updateResult.affectedRows === 0) {
-                // Throws the original error if the order was already paid or ID is wrong
                 throw new Error('Order not found or was already paid.');
             }
 
-            // 6. Print Receipts (Only run AFTER successful DB update)
+            // 6. Print Receipts
             const shopPrintResult = await printReceipt(mainWindow, settings.shop_printer, shopReceiptHTML);
-          //  const kitchenPrintResult = await printReceipt(mainWindow, settings.kitchen_printer, kitchenReceiptHTML);
             
             // 7. Broadcast update
             broadcastToAll("orders-updated");
@@ -744,7 +958,6 @@ if (typeof products === 'string') {
             };
         } catch (error) {
             console.error("Error confirming payment and printing:", error);
-            // Re-throw the error with a simplified message for the front end
             throw new Error(`Failed to confirm payment: ${error.message}`);
         }
     });

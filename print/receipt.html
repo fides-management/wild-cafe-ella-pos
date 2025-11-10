@@ -1,161 +1,228 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Receipt</title>
-<style>
-  body {
-    font-family: "Inter", sans-serif;
-    margin:0;
-    padding:18px;
-    width:350px;
-    font-size:13px;
-    line-height:1.5;
-    color:#111;
-    background:#fff;
-  }
-
-  .brand {
-    text-align:center;
-    font-size:18px;
-    font-weight:700;
-    margin-bottom:2px;
-    letter-spacing:0.5px;
-    text-transform:uppercase;
-  }
-
-  .sub-title {
-    text-align:center;
-    font-size:12px;
-    margin-bottom:10px;
-    opacity:0.7;
-  }
-
-  .divider {
-    border-top:1px dashed #555;
-    margin:10px 0;
-  }
-
-  .info {
-    font-size:12px;
-    margin-bottom:8px;
-  }
-
-  table { width:100%; border-collapse:collapse; }
-  .items td { padding:6px 0; }
-  .qty { text-align:left; width:28px; font-weight:600; }
-  .name { white-space:wrap; width:160px; }
-  .price { text-align:right; width:75px; font-weight:600; }
-
-  .total-row {
-    font-weight:700;
-    margin-top:8px;
-    font-size:14px;
-  }
-
-  .flex-line {
-    display:flex;
-    justify-content:space-between;
-    margin:3px 0;
-  }
-
-  .thanks {
-    text-align:center;
-    font-size:12px;
-    margin-top:12px;
-    font-weight:500;
-  }
-
-  .footer-note {
-    font-size:11px;
-    text-align:center;
-    opacity:0.6;
-  }
-
-  @media print {
-    body { padding:0; }
-  }
-</style>
+    <meta charset="utf-8">
+    <title>Shop Receipt</title>
+    <style>
+        /* * Standard Thermal Receipt Styling 
+         */
+        body { 
+            font-family: monospace; /* Classic receipt font */
+            margin: 0; 
+            padding: 0 5px; /* Slight padding for edges */
+            width: 280px; /* Standard thermal width (adjust if needed) */
+            font-size: 11px; 
+            line-height: 1.3; 
+            color: #000;
+        }
+        
+        .section { margin-bottom: 5px; }
+        .center { text-align: center; }
+        
+        /* Header/Business Info Styling */
+        .header h1 { 
+            font-size: 16px; 
+            margin: 0 0 2px 0; 
+            font-weight: bold;
+        }
+        .header p { 
+            margin: 1px 0; 
+        }
+        
+        /* Dashed Line Separator */
+        .line { 
+            border-top: 1px dashed #000; 
+            margin: 5px 0; 
+            width: 100%;
+        }
+        
+        /* Items Table */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 5px;
+        }
+        table thead { 
+            border-bottom: 1px dashed #000; 
+            font-weight: bold;
+        }
+        .items td { 
+            padding: 4px 0; 
+        }
+        .qty { text-align: left; width: 15%; }
+        .name { width: 55%; }
+        .price { text-align: right; width: 30%; }
+        
+        /* Summary Rows (Totaling Area) */
+        .summary-row { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 3px 0; 
+        }
+        .summary-row strong { font-weight: bold; }
+        .total-line { 
+            font-size: 13px; 
+            font-weight: bold; 
+            margin-top: 8px; /* Extra space before total */
+        }
+        
+        /* Footer/Notes */
+        .footer { 
+            margin-top: 15px; 
+            text-align: center; 
+            font-size: 10px;
+        }
+        .hidden { display: none; }
+        
+        /* Print media query cleanup */
+        @media print { 
+            body { padding: 0; } 
+        }
+    </style>
 </head>
 <body>
 
-<div class="brand">WILD CAFE ELLA</div>
-<div class="sub-title">TAX INVOICE</div>
-
-<div class="info">
-  Table: <strong id="table"></strong> &nbsp; | &nbsp; Order #: <strong id="orderId"></strong><br>
-  Date: <span id="date"></span>
+<div class="header center section">
+    <h1 id="business-name">WILD CAFE ELLA</h1>
+    <p id="business-address">Address Line 1</p>
+    <p id="business-phone">Phone: N/A</p>
+    <p id="business-email">Email: N/A</p>
 </div>
+<div class="line"></div>
 
-<div class="divider"></div>
-
-<table class="items"><tbody id="list"></tbody></table>
-
-<div class="divider"></div>
-
-<div class="flex-line">
-  <span>Subtotal</span>
-  <span id="subtotal"></span>
+<div class="section">
+    <div class="summary-row"><strong>Table:</strong> <span id="table"></span></div>
+    <div class="summary-row"><strong>Order #:</strong> <span id="orderId"></span></div>
+    <div class="summary-row"><strong>Date/Time:</strong> <span id="time"></span></div>
 </div>
+<div class="line"></div>
 
-<div class="flex-line">
-  <span>Tax (10%)</span>
-  <span id="tax"></span>
+<table>
+    <thead>
+        <tr>
+            <td class="qty">QTY</td>
+            <td class="name">ITEM</td>
+            <td class="price">PRICE</td>
+        </tr>
+    </thead>
+    <tbody id="list"></tbody>
+</table>
+<div class="line"></div>
+
+<div class="summary section">
+    <div class="summary-row"><span>Subtotal:</span><span id="subtotal"></span></div>
+    
+    <div class="summary-row hidden" id="discount-line">
+        <span>Discount (<span id="discount-rate">0</span>%):</span>
+        <span id="discount-amount"></span>
+    </div>
+    
+    <div class="summary-row">
+        <span>Tax (<span id="tax-rate">0</span>%):</span>
+        <span id="tax"></span>
+    </div>
+    
+    <div class="line"></div>
+    <div class="summary-row total-line"><span>TOTAL:</span><span id="total"></span></div>
 </div>
+<div class="line"></div>
 
-<div class="flex-line total-row">
-  <span>Total</span>
-  <span id="total"></span>
+<div class="payment section">
+    <div class="summary-row"><span>Method:</span><span id="method"></span></div>
+    <div class="summary-row"><span>Amount Paid:</span><span id="paid"></span></div>
+    <div class="summary-row"><span>Change:</span><span id="change"></span></div>
 </div>
+<div class="line"></div>
 
-<div class="divider"></div>
-
-<div class="flex-line">
-  <span>Paid (<span id="method"></span>)</span>
-  <strong id="paid"></strong>
+<div class="footer">
+    <p>Thank you for dining with us!</p>
+    <p>Printed: <span id="now"></span></p>
 </div>
-
-<div class="flex-line">
-  <span>Change</span>
-  <strong id="change"></strong>
-</div>
-
-<div class="divider"></div>
-
-<div class="thanks">Thank you for dining with us!</div>
-<div class="footer-note" id="now"></div>
 
 <script>
-  window.onmessage = e => {
-    if (e.data.type !== 'receipt') return;
+    let receiptData = null;
 
-    const { order, payment, CURRENCY, TAX_ENABLED } = e.data;
-    const desk = window.opener?.api?._deskCache?.find(d=>d.id==order.tableId)?.name 
-               || 'Table ' + order.tableId;
+    const renderReceipt = () => {
+        if (!receiptData) return; 
 
-    document.getElementById('table').textContent = desk;
-    document.getElementById('orderId').textContent = order.orderId;
-    document.getElementById('date').textContent = new Date(order.time || Date.now()).toLocaleString();
-    document.getElementById('now').textContent = new Date().toLocaleString();
+        const { order, payment, summary, settings, table } = receiptData.data;
+        const CURRENCY = settings.currency;
+        const TAX_ENABLED = settings.taxEnabled;
+        const TAX_RATE = settings.taxRate;
+        
+        // Calculate discount amount from the order's discount rate
+        const subtotalValue = summary.subtotal;
+        const discountRate = order.discount || 0;
+        const discountAmount = subtotalValue * (discountRate / 100);
 
-    document.getElementById('list').innerHTML = order.items.map(it => `
-      <tr>
-        <td class="qty">${it.qty}x</td>
-        <td class="name">${it.name}</td>
-        <td class="price">${CURRENCY}${(it.price * it.qty).toFixed(2)}</td>
-      </tr>
-    `).join('');
+        console.log(settings.businessName)
 
-    document.getElementById('subtotal').textContent = CURRENCY + payment.subtotal.toFixed(2);
-    document.getElementById('tax').textContent = TAX_ENABLED ? CURRENCY + payment.tax.toFixed(2) : '—';
-    document.getElementById('total').textContent = CURRENCY + payment.total.toFixed(2);
-    document.getElementById('method').textContent = payment.method;
-    document.getElementById('paid').textContent = CURRENCY + payment.paid.toFixed(2);
-    document.getElementById('change').textContent = CURRENCY + payment.change.toFixed(2);
+        // Set Business Info
+        document.getElementById('business-name').textContent = settings.businessName || 'WILD CAFE ELLA';
+        document.getElementById('business-address').textContent = settings.address || 'Address not available';
+        document.getElementById('business-phone').textContent = 'Phone: ' + (settings.phoneNumber || 'N/A');
+        document.getElementById('business-email').textContent = 'Email: ' + (settings.email || 'N/A');
+        
+        // Set Order Info
+        document.getElementById('table').textContent = table.name || 'N/A';
+        document.getElementById('orderId').textContent = order.orderId;
+        document.getElementById('time').textContent = new Date().toLocaleString(); 
+        document.getElementById('now').textContent = new Date().toLocaleTimeString();
 
-    setTimeout(() => window.print(), 300);
-  };
+        // Render Items
+        document.getElementById('list').innerHTML = order.items.map(it => `
+            <tr>
+                <td class="qty">${it.qty}×</td>
+                <td class="name">${it.name}</td>
+                <td class="price">${CURRENCY}${(it.price * it.qty).toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        // Update Summary Section
+        document.getElementById('subtotal').textContent = CURRENCY + summary.subtotal.toFixed(2);
+        
+        // Handle Discount visibility
+        const discountLine = document.getElementById('discount-line');
+        if (discountAmount > 0) {
+            discountLine.classList.remove('hidden');
+            document.getElementById('discount-rate').textContent = discountRate;
+            document.getElementById('discount-amount').textContent = `-${CURRENCY}${discountAmount.toFixed(2)}`;
+        } else {
+            discountLine.classList.add('hidden');
+        }
+
+        // Handle Tax visibility
+        document.getElementById('tax-rate').textContent = `${TAX_RATE}%`;
+        document.getElementById('tax').textContent = TAX_ENABLED ? CURRENCY + summary.tax.toFixed(2) : '—';
+        
+        document.getElementById('total').textContent = CURRENCY + summary.total.toFixed(2);
+        
+        // Update Payment Section
+        document.getElementById('method').textContent = payment.method;
+        document.getElementById('paid').textContent = CURRENCY + payment.paid.toFixed(2);
+        document.getElementById('change').textContent = CURRENCY + payment.change.toFixed(2);
+
+        // Trigger print
+        setTimeout(() => window.print(), 300);
+    };
+
+
+    // 1. Listen for the message from the parent window
+    window.onmessage = e => {
+        if (e.data.type !== 'shop-ticket' || !e.data.data) return;
+        
+        // 2. Buffer the data immediately
+        receiptData = e.data;
+
+        // 3. Try to render. If DOM is already loaded, this will run immediately.
+        renderReceipt();
+    };
+
+    // 4. Fallback/Guarantee: Run render after the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        // If the message arrived before DOMContentLoaded, this will trigger the render
+        renderReceipt();
+    });
 </script>
-
 </body>
 </html>

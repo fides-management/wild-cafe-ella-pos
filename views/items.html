@@ -43,7 +43,7 @@
 <body>
   <div class="container">
     <h2>Menu Item Management</h2>
-    <button id="back-btn" style="background:none;border:none;color:var(--accent);font-size:1rem;cursor:pointer;margin-bottom:20px;text-decoration:underline;">
+   <button id="back-btn" style="background:none;border:none;color:var(--accent);font-size:1rem;cursor:pointer;margin-bottom:20px;text-decoration:underline;">
       Back to POS
     </button>
 
@@ -375,7 +375,9 @@ items = await window.electronAPI.fetchMenu();
         await window.api.deleteMenuItem(id);
         toast('Item deleted!', 'success');
         await refreshTable(); // Refresh the table after deletion
-        
+        setTimeout(() => {
+            window.close();
+        }, 500); 
       } catch (e) {
         console.error('delete error:', e);
         toast('Delete failed: ' + e.message, 'error');
@@ -385,8 +387,8 @@ items = await window.electronAPI.fetchMenu();
     };
 
     const closeModal = () => $('#editModal').style.display = 'none';
-     window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
-    $('#back-btn').onclick = () => window.close(); // Expose to the window object for the close button handler
+      window.onclick = e => { if (e.target === $('#editModal')) closeModal(); };
+    $('#back-btn').onclick = () => window.close();; // Expose to the window object for the close button handler
 
     // Initial Load
     document.addEventListener('DOMContentLoaded', load);

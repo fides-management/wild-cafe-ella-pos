@@ -369,13 +369,53 @@
         // REMOVED: Old hardcoded TAX_RATE, TAX_ENABLED, DISCOUNT_ENABLED
         
         // NEW: Dynamic global settings object
-        let globalSettings = {
-            TAX_RATE: 10, // Default 10%
-            TAX_ENABLED: true, // Default true
-            DISCOUNT_RATE: 0, // Default 0%
-            DISCOUNT_ENABLED: true, // Default true
-            CURRENCY_SYMBOL: 'Rs' // Default 'Rs'
-        };
+        // let globalSettings = {
+        //     TAX_RATE: 10, // Default 10%
+        //     TAX_ENABLED: true, // Default true
+        //     DISCOUNT_RATE: 0, // Default 0%
+        //     DISCOUNT_ENABLED: true, // Default true
+        //     CURRENCY_SYMBOL: 'Rs' // Default 'Rs'
+        // };
+      
+
+        // --- NEW GLOBAL SETTINGS OBJECT ---
+const globalSettings = {
+    CURRENCY_SYMBOL: 'Rs', 
+    TAX_RATE: 10,
+    TAX_ENABLED: true,
+    BUSINESS_NAME: 'WILD CAFE ELLA',
+    ADDRESS: 'Address not set',
+    PHONE_NUMBER: "0777777",
+    EMAIL: "wildcafe@gmail.com",
+    // You can add phone, email, etc., here too
+};
+
+// --- NEW FUNCTION: Fetch and set all global settings ---
+const loadSettings = async () => {
+    try {
+        // Assuming your backend exposes a function to fetch all settings
+        const settings = await window.electronAPI.getSettings(); 
+
+        if (settings) {
+            globalSettings.CURRENCY_SYMBOL = settings.currency_symbol || globalSettings.CURRENCY_SYMBOL;
+            globalSettings.TAX_RATE = parseFloat(settings.tax_rate) || globalSettings.TAX_RATE;
+            globalSettings.TAX_ENABLED = settings.tax_enabled === 1; 
+            globalSettings.BUSINESS_NAME = settings.name || globalSettings.BUSINESS_NAME; 
+            globalSettings.ADDRESS = settings.address || globalSettings.ADDRESS;
+            globalSettings.PHONE_NUMBER = settings.phone_number || globalSettings.PHONE_NUMBER;
+              globalSettings.EMAIL = settings.email || globalSettings.EMAIL;
+            // You can set header info here if needed, e.g.
+            // document.querySelector('.header-info h2').textContent = globalSettings.BUSINESS_NAME;
+        }
+    } catch (error) {
+        console.error("Failed to load settings:", error);
+    }
+};
+// --------------------------------------------------------
+
+// ... (other functions like loadTables, renderTables, etc.) ...
+
+// ------------------------------------
         
         // Global Currency Symbol (Kept for backward compatibility with old code that might use it directly)
         let CURRENCY_SYMBOL = globalSettings.CURRENCY_SYMBOL; 
@@ -982,6 +1022,52 @@
             return cur + key;
         };
         
+        // // Numpad key event listener
+        // document.querySelectorAll('.numpad-key').forEach(k => k.addEventListener('click', () => {
+        //     const disp = document.getElementById('numpad-display');
+        //     const cur = disp.textContent;
+        //     const key = k.dataset.key;
+
+        //     if (key === 'ENTER') {
+        //         let val = disp.textContent;
+        //         const idx = document.getElementById('numpad-modal').dataset.itemIndex;
+
+        //         if (globalNumpadTarget === 'qty' && idx !== '') {
+        //             const numVal = parseInt(val) || 0;
+        //             if (numVal <= 0) currentOrder.items.splice(idx, 1);
+        //             else currentOrder.items[idx].qty = numVal;
+        //             renderCurrentOrder();
+        //         } else if (globalNumpadTarget === 'search') {
+        //             document.getElementById('menu-search').value = val;
+        //             const active = document.querySelector('.category-tag.active');
+        //             filterMenu(active ? active.dataset.category : 'All', active);
+        //         } else if (globalNumpadTarget === 'payment') {
+        //             const num = parseFloat(val) || 0;
+        //             val = num.toFixed(2);
+        //             document.getElementById('payment-amount').value = val;
+        //             // Auto-update change due
+        //             const totalDueText = document.getElementById('payment-total-due').textContent;
+        //             // Use globalSettings.CURRENCY_SYMBOL for replacement
+        //             const totalDue = parseFloat(totalDueText.replace(new RegExp(`^${globalSettings.CURRENCY_SYMBOL.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}`), ''));
+        //             const change = (num - totalDue).toFixed(2);
+        //             document.getElementById('payment-change').textContent = formatCurrency(change);
+        //         } else if (globalNumpadTarget === 'discount') {
+        //             const num = parseFloat(val) || 0;
+        //             currentOrder.discount = Math.max(0, num);
+        //             renderCurrentOrder();
+        //         }
+
+        //         closeModal('numpad-modal');
+        //         // Re-open payment modal if target was 'payment'
+        //         if (globalNumpadTarget === 'payment') {
+        //             document.getElementById('payment-modal').classList.add('is-active');
+        //         }
+
+        //     } else {
+        //         disp.textContent = handleNumpadInput(key, cur);
+        //     }
+        // }));
+
         // Numpad key event listener
         document.querySelectorAll('.numpad-key').forEach(k => k.addEventListener('click', () => {
             const disp = document.getElementById('numpad-display');
@@ -998,9 +1084,19 @@
                     else currentOrder.items[idx].qty = numVal;
                     renderCurrentOrder();
                 } else if (globalNumpadTarget === 'search') {
+                    
+                    // --- START OF FIX ---
+                    // If the target is 'search' and the value is '0',
+                    // treat it as an empty string ('') to clear the filter.
+                    if (val === '0') {
+                        val = '';
+                    }
+                    // --- END OF FIX ---
+
                     document.getElementById('menu-search').value = val;
                     const active = document.querySelector('.category-tag.active');
                     filterMenu(active ? active.dataset.category : 'All', active);
+
                 } else if (globalNumpadTarget === 'payment') {
                     const num = parseFloat(val) || 0;
                     val = num.toFixed(2);
@@ -1027,7 +1123,6 @@
                 disp.textContent = handleNumpadInput(key, cur);
             }
         }));
-
         // Menu Search Click Handler
         document.getElementById('menu-search').addEventListener('click', e => {
             e.preventDefault();
@@ -1143,23 +1238,114 @@
             document.getElementById('payment-modal').classList.add('is-active');
         };
 
-      const handleConfirmPayment = async () => {
-    if (isProcessing) return;
-    const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
-    const paid = parseFloat(document.getElementById('payment-amount').value);
+//       const handleConfirmPayment = async () => {
+//     if (isProcessing) return;
+//     const { total } = calculateSummary(currentOrder.items, currentOrder.discount);
+//     const paid = parseFloat(document.getElementById('payment-amount').value);
     
-    // --- ADDED: Calculate change amount needed for paymentData ---
+//     // --- ADDED: Calculate change amount needed for paymentData ---
+//     const change = paid - total; 
+
+//     if (paid < total || isNaN(paid)) {
+//         // If amount paid is less than total, open the Numpad to force entry
+//         closeModal('payment-modal');
+//         openNumpad('payment', 'decimal', document.getElementById('payment-amount').value);
+//         return; // Stop processing and wait for Numpad entry
+//     }
+
+//     if (!currentOrder.orderId) {
+//         // Should not happen if Send to Kitchen is followed, but as a safeguard:
+//         showNotification('Order must be sent to kitchen first!');
+//         return;
+//     }
+
+//     isProcessing = true;
+//     const btn = document.getElementById('finish-bill-btn');
+//     btn.disabled = true;
+
+//     try {
+//         const paymentData = { 
+//             order_id: currentOrder.orderId, 
+//             payment_mode: selectedPaymentMode,
+//             // --- FIX: Pass the amount paid and change amount to the main process handler ---
+//             amount_paid: paid,
+//             change_amount: change,
+//         };
+
+//         // Call db:updateOrderToPaid (updates active = 'paid' in db.js)
+//         const result = await window.electronAPI.updateOrderToPaid(paymentData);
+
+//         if (result.success) {
+//             // NOTE: The 'const change = paid - total;' line below is now redundant, 
+//             // but is left for minimal change, as it was in the success block. 
+//             // The value 'change' is available from the scope above.
+//             // const change = paid - total; 
+
+//             // Mock: Log the final receipt data
+//             console.log('--- FINAL RECEIPT ---', {
+//                 order: JSON.parse(JSON.stringify(currentOrder)),
+//                 payment: { 
+//                     paid, 
+//                     change, // Uses the 'change' value from the scope above
+//                     method: selectedPaymentMode, 
+//                     total, 
+//                     // Use dynamic settings for tax rate
+//                     tax_rate: globalSettings.TAX_ENABLED ? globalSettings.TAX_RATE.toFixed(1) : 0, 
+//                 },
+//             });
+
+//             closeModal('payment-modal');
+            
+//             // Reset local state after successful payment
+//             ongoingOrders = ongoingOrders.filter(o => o.tableId !== currentOrder.tableId);
+//             const t = tables.find(x => x.id === currentOrder.tableId);
+//             if (t) t.status = 'open';
+            
+//             currentOrder = { tableId: null, orderId: null, items: [], discount: 0, notes: '' };
+
+//             document.getElementById('header-table-info').textContent = 'Select a table to begin';
+//             document.getElementById('order-table-info').textContent = '';
+//             document.getElementById('mobile-table-selector').value = '';
+//             resetKitchenNotes();
+//             updateMenuPanelState();
+//             renderTables();
+//             renderCurrentOrder();
+//             showNotification(`Bill finalized! Change: ${formatCurrency(change)}`);
+//             const win = window.open('print/receipt.html', '_blank', 'width=400,height=600');
+//             win.onload = () => win.postMessage({ type: 'shop-ticket', order: JSON.parse(JSON.stringify(currentOrder)) /* other data */ }, '*');
+//         } else {
+//             showNotification(`Error: ${result.message}`);
+//             btn.disabled = false; // Re-enable button on error
+//         }
+//     } catch (error) {
+//         console.error("Error confirming payment:", error);
+//         showNotification(`Failed to process payment: ${error.message}`);
+//         btn.disabled = false;
+//     } finally {
+//         isProcessing = false;
+//     }
+// };
+
+const handleConfirmPayment = async () => {
+    if (isProcessing) return;
+
+    // --- FIX 1: Destructure all required summary values (subtotal, tax, total) ---
+    // Assuming calculateSummary returns { subtotal: X, tax: Y, total: Z }
+    const { subtotal, tax, total } = calculateSummary(currentOrder.items, currentOrder.discount);
+    
+    const paid = parseFloat(document.getElementById('payment-amount').value);
     const change = paid - total; 
+    
+    // --- FIX 2: Keep a copy of the order *before* clearing it ---
+    const orderForReceipt = JSON.parse(JSON.stringify(currentOrder));
 
     if (paid < total || isNaN(paid)) {
-        // If amount paid is less than total, open the Numpad to force entry
         closeModal('payment-modal');
         openNumpad('payment', 'decimal', document.getElementById('payment-amount').value);
-        return; // Stop processing and wait for Numpad entry
+        return; 
     }
 
     if (!currentOrder.orderId) {
-        // Should not happen if Send to Kitchen is followed, but as a safeguard:
         showNotification('Order must be sent to kitchen first!');
         return;
     }
@@ -1172,33 +1358,46 @@
         const paymentData = { 
             order_id: currentOrder.orderId, 
             payment_mode: selectedPaymentMode,
-            // --- FIX: Pass the amount paid and change amount to the main process handler ---
             amount_paid: paid,
             change_amount: change,
+            // Include total and discount rate for backend processing
+            total_due: total,
+            discount_amount: currentOrder.discount 
         };
 
-        // Call db:updateOrderToPaid (updates active = 'paid' in db.js)
+        // Call db:updateOrderToPaid
         const result = await window.electronAPI.updateOrderToPaid(paymentData);
 
         if (result.success) {
-            // NOTE: The 'const change = paid - total;' line below is now redundant, 
-            // but is left for minimal change, as it was in the success block. 
-            // The value 'change' is available from the scope above.
-            // const change = paid - total; 
-
-            // Mock: Log the final receipt data
-            console.log('--- FINAL RECEIPT ---', {
-                order: JSON.parse(JSON.stringify(currentOrder)),
-                payment: { 
-                    paid, 
-                    change, // Uses the 'change' value from the scope above
-                    method: selectedPaymentMode, 
-                    total, 
-                    // Use dynamic settings for tax rate
-                    tax_rate: globalSettings.TAX_ENABLED ? globalSettings.TAX_RATE.toFixed(1) : 0, 
+            
+            // --- FIX 3: Create the COMPLETE receipt object for postMessage ---
+            const finalReceiptData = {
+                order: orderForReceipt, 
+                payment: {
+                    method: selectedPaymentMode,
+                    paid: paid,
+                    change: change,
                 },
-            });
-
+                summary: {
+                    subtotal: subtotal,
+                    tax: tax,
+                    total: total,
+                    discount: orderForReceipt.discount
+                },
+                // Pass all settings needed for the frontend receipt window
+                settings: {
+                    currency: globalSettings.CURRENCY_SYMBOL,
+                    taxRate: globalSettings.TAX_RATE,
+                    taxEnabled: globalSettings.TAX_ENABLED,
+                    businessName: globalSettings.BUSINESS_NAME,
+                    address: globalSettings.ADDRESS,
+                    phoneNumber: globalSettings.PHONE_NUMBER, // Assuming you added this to globalSettings
+                    email: globalSettings.EMAIL,             // Assuming you added this to globalSettings
+                },
+                table: tables.find(t => t.id === orderForReceipt.tableId) || { name: `Table ${orderForReceipt.tableId}` }
+            };
+            // --- END OF FIX ---
+            
             closeModal('payment-modal');
             
             // Reset local state after successful payment
@@ -1216,11 +1415,18 @@
             renderTables();
             renderCurrentOrder();
             showNotification(`Bill finalized! Change: ${formatCurrency(change)}`);
+            
             const win = window.open('print/receipt.html', '_blank', 'width=400,height=600');
-            win.onload = () => win.postMessage({ type: 'shop-ticket', order: JSON.parse(JSON.stringify(currentOrder)) /* other data */ }, '*');
+            
+            // --- FIX 4: Send the COMPLETE finalReceiptData object with the 'data' key ---
+            win.onload = () => win.postMessage({ type: 'shop-ticket', data: finalReceiptData }, '*');
+           
+
+            
+            
         } else {
             showNotification(`Error: ${result.message}`);
-            btn.disabled = false; // Re-enable button on error
+            btn.disabled = false;
         }
     } catch (error) {
         console.error("Error confirming payment:", error);
@@ -1230,6 +1436,7 @@
         isProcessing = false;
     }
 };
+
 document.getElementById('open-reports-page').addEventListener('click', () => { 
         // Tell Electron (via preload.js) to open the new reports window
         window.electronAPI.openReportsPage();
@@ -1283,6 +1490,8 @@ async function loadTables() {
             if (user && userInfoElement) {
                 userInfoElement.textContent = `Logged in as: ${user.name}`;
             }
+
+                loadSettings();
             loadTables();
         });
     </script>
